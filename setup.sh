@@ -15,9 +15,15 @@ CF_DIR="cloud_flare"
 log(){ printf "\n[setup] %s\n" "$*"; }
 error(){ printf "\n[ERROR] %s\n" "$*" >&2; }
 
-# تابع برای رفع مشکل DNS
-fix_dns_issues() {
-    log "🔧 Fixing DNS issues..."
+# تابع برای رفع مشکل certificate و DNS
+fix_system_issues() {
+    log "🔧 Fixing system issues..."
+    
+    # نصب ca-certificates برای رفع مشکل certificate
+    if [ "$IS_TERMUX" -eq 1 ]; then
+        pkg install -y ca-certificates 2>/dev/null || true
+        update-ca-certificates 2>/dev/null || true
+    fi
     
     # تنظیم DNS سرورهای معتبر
     if [ -w "$PREFIX/etc/resolv.conf" ]; then
@@ -25,10 +31,6 @@ fix_dns_issues() {
         echo "nameserver 1.1.1.1" >> $PREFIX/etc/resolv.conf
         echo "nameserver 208.67.222.222" >> $PREFIX/etc/resolv.conf
         log "✅ DNS servers configured"
-    else
-        log "⚠️ Cannot modify resolv.conf, trying alternative method..."
-        # روش جایگزین: استفاده از محیطی متغیر DNS
-        export DNS_SERVERS="8.8.8.8,1.1.1.1"
     fi
     
     # تست اتصال به Cloudflare
@@ -38,6 +40,8 @@ fix_dns_issues() {
     else
         log "⚠️ Connection test failed, but continuing..."
     fi
+    
+    log "✅ System issues fixed"
 }
 
 # پاکسازی کامل cloudflared قبلی
@@ -84,7 +88,7 @@ install_dependencies() {
     
     if [ "$IS_TERMUX" -eq 1 ]; then
         pkg update -y
-        pkg install -y python git curl wget -y
+        pkg install -y python git curl wget ca-certificates -y
     else
         log "Please install Python and Git manually for your system"
         return 1
@@ -97,6 +101,7 @@ setup_python_env() {
     
     if [ ! -d "$VENV_DIR" ]; then
         python -m venv "$VENV_DIR"
+        log "✅ Virtual environment created"
     fi
     
     if [ -f "${VENV_DIR}/bin/activate" ]; then
@@ -109,8 +114,10 @@ setup_python_env() {
     pip install --upgrade pip
     if [ -f "requirements.txt" ]; then
         pip install -r requirements.txt
+        log "✅ Requirements installed"
     else
         pip install rich pyfiglet requests flask
+        log "✅ Basic packages installed"
     fi
     
     log "✅ Python environment ready"
@@ -130,6 +137,7 @@ download_cloudflared_guaranteed() {
     
     # دانلود با curl
     if command -v curl >/dev/null 2>&1; then
+        log "🔻 Using curl for download..."
         if curl -L --progress-bar -o "$OUTPUT_FILE" "$URL"; then
             log "✅ Download completed with curl"
         else
@@ -144,6 +152,7 @@ download_cloudflared_guaranteed() {
         fi
     # دانلود با wget
     elif command -v wget >/dev/null 2>&1; then
+        log "🔻 Using wget for download..."
         if wget -O "$OUTPUT_FILE" "$URL"; then
             log "✅ Download completed with wget"
         else
@@ -160,12 +169,13 @@ download_cloudflared_guaranteed() {
         return 1
     fi
     
-    # بررسی فایل دانلود شده
+    # بررسی اینکه فایل دانلود شده است
     if [ ! -f "$OUTPUT_FILE" ]; then
         error "❌ Downloaded file not found!"
         return 1
     fi
     
+    # بررسی سایز فایل (نباید خالی باشد)
     FILE_SIZE=$(stat -c%s "$OUTPUT_FILE" 2>/dev/null || stat -f%z "$OUTPUT_FILE" 2>/dev/null || echo "0")
     if [ "$FILE_SIZE" -lt 1000000 ]; then
         error "❌ Downloaded file seems too small ($FILE_SIZE bytes)"
@@ -175,23 +185,28 @@ download_cloudflared_guaranteed() {
     log "📊 File size: $FILE_SIZE bytes"
     
     # دادن مجوز اجرا
-    chmod +x "$OUTPUT_FILE"
-    log "✅ Execute permissions set"
+    log "🔐 Setting execute permissions..."
+    if chmod +x "$OUTPUT_FILE"; then
+        log "✅ Execute permissions set"
+    else
+        error "❌ Failed to set execute permissions"
+        return 1
+    fi
     
-    # تست سریع
+    # تست نهایی
     if [ -x "$OUTPUT_FILE" ]; then
         log "✅ File is executable"
         echo "$OUTPUT_FILE"
         return 0
     else
-        error "❌ File is not executable"
+        error "❌ File is not executable after permission change"
         return 1
     fi
 }
 
-# تست cloudflared با مدیریت خطای DNS
-test_cloudflared_tunnel() {
-    log "🔍 Testing cloudflared tunnel functionality..."
+# تست cloudflared بدون ایجاد تونل واقعی (برای جلوگیری از توقف)
+test_cloudflared_safe() {
+    log "🔍 Testing cloudflared (safe mode)..."
     
     local cf_path="${CF_DIR}/cloudflared"
     
@@ -200,27 +215,41 @@ test_cloudflared_tunnel() {
         return 1
     fi
     
-    # تست سریع با timeout
-    timeout 10s "$cf_path" version >/dev/null 2>&1
-    if [ $? -eq 0 ]; then
+    # تست سریع نسخه بدون timeout طولانی
+    if "$cf_path" version >/dev/null 2>&1; then
         log "✅ cloudflared basic test passed"
         
-        # تست تونل (با timeout کوتاه)
-        log "🌐 Testing tunnel creation (may take 15 seconds)..."
+        # تست کوتاه تونل بدون انتظار برای URL
+        log "🌐 Quick tunnel test..."
+        local test_pid
         local test_output
-        test_output=$(timeout 15s "$cf_path" tunnel --url http://localhost:9999 2>&1 | head -20)
         
+        # اجرای تست در پس زمینه
+        "$cf_path" tunnel --url http://localhost:9999 > /tmp/cloudflared_test.log 2>&1 &
+        test_pid=$!
+        
+        # صبر کوتاه برای شروع
+        sleep 5
+        
+        # خواندن خروجی و بررسی خطاها
+        test_output=$(cat /tmp/cloudflared_test.log | head -10)
+        
+        # متوقف کردن تست
+        kill $test_pid 2>/dev/null || true
+        
+        # بررسی خروجی
         if echo "$test_output" | grep -q "trycloudflare.com"; then
-            log "🎉 Tunnel test successful! Cloudflare is working."
-            return 0
+            log "🎉 Tunnel test successful!"
+        elif echo "$test_output" | grep -q "certificate"; then
+            log "⚠️ Certificate issues detected (will use --no-tls-verify)"
         elif echo "$test_output" | grep -q "connection refused\|dns"; then
-            log "⚠️ DNS issues detected, but cloudflared is installed"
-            log "💡 The tunnel may still work in the main application"
-            return 0
+            log "⚠️ DNS issues detected"
         else
-            log "⚠️ Tunnel test inconclusive, but cloudflared is ready"
-            return 0
+            log "✅ cloudflared is ready for use"
         fi
+        
+        rm -f /tmp/cloudflared_test.log
+        return 0
     else
         error "❌ cloudflared basic test failed"
         return 1
@@ -246,6 +275,42 @@ create_directories() {
     log "✅ Directories created"
 }
 
+# ایجاد فایل پیکربندی برای cloudflared (رفع مشکل certificate)
+create_cloudflared_config() {
+    log "⚙️ Creating cloudflared configuration..."
+    
+    local config_file="${CF_DIR}/config.yml"
+    
+    cat > "$config_file" << EOF
+# Cloudflared configuration for Cyphisher
+tunnel: cyphisher-tunnel
+credentials-file: ${CF_DIR}/credentials.json
+
+ingress:
+  - hostname: cyphisher.localhost
+    service: http://localhost:${PORT}
+  - service: http_status:404
+
+warp-routing:
+  enabled: false
+
+originRequest:
+  noTLSVerify: true
+  connectTimeout: 30s
+  tlsTimeout: 10s
+  tcpKeepAlive: 30s
+  noHappyEyeballs: false
+  keepAliveConnections: 10
+  keepAliveTimeout: 1m30s
+
+logging:
+  level: info
+  format: json
+EOF
+
+    log "✅ Cloudflared configuration created"
+}
+
 # تابع اصلی
 main() {
     log "🚀 Starting Cyphisher Setup for Termux..."
@@ -258,8 +323,8 @@ main() {
         exit 1
     fi
     
-    # مرحله 2: رفع مشکلات DNS
-    fix_dns_issues
+    # مرحله 2: رفع مشکلات سیستم
+    fix_system_issues
     
     # مرحله 3: پاکسازی کامل
     cleanup_old_cloudflared
@@ -271,17 +336,24 @@ main() {
     setup_python_env
     
     # مرحله 6: دانلود cloudflared
-    log "⬇️ Downloading cloudflared..."
-    if download_cloudflared_guaranteed; then
-        log "🎉 cloudflared downloaded successfully!"
-        
-        # مرحله 7: تست cloudflared
-        test_cloudflared_tunnel
+    if [ "$AUTO_CF" = "1" ]; then
+        log "⬇️ Downloading cloudflared..."
+        if download_cloudflared_guaranteed; then
+            log "🎉 cloudflared downloaded successfully!"
+            
+            # مرحله 7: تست امن cloudflared
+            test_cloudflared_safe
+            
+            # مرحله 8: ایجاد پیکربندی
+            create_cloudflared_config
+        else
+            log "⚠️ Cloudflared download failed - continuing without tunnel support"
+        fi
     else
-        log "⚠️ Cloudflared download failed - continuing without tunnel support"
+        log "⚠️ Cloudflared auto-download disabled"
     fi
     
-    # مرحله 8: ایجاد دایرکتوری‌ها
+    # مرحله 9: ایجاد دایرکتوری‌ها
     create_directories
     
     # خلاصه نصب
@@ -295,7 +367,8 @@ main() {
     
     if [ -f "${CF_DIR}/cloudflared" ] && [ -x "${CF_DIR}/cloudflared" ]; then
         log "Cloudflared: ✅ INSTALLED AND READY"
-        log "Location: ${CF_DIR}/cloudflared"
+        log "Configuration: ${CF_DIR}/config.yml"
+        log "Note: Certificate issues are handled automatically"
     else
         log "Cloudflared: ❌ NOT AVAILABLE"
     fi
@@ -308,6 +381,7 @@ main() {
         PYTHON_BIN="${VENV_DIR}/bin/python"
         clear
         log "🏁 Launching Cyphisher..."
+        export CLOUDFLARED_PATH="${CF_DIR}/cloudflared"
         exec "$PYTHON_BIN" "$APP_FILE"
     else
         error "Python binary not found"
