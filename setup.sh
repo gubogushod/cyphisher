@@ -291,9 +291,21 @@ download_cloudflared() {
         return 1
     fi
 
-    # دادن مجوز اجرا برای سیستم‌های غیر ویندوز
+    # دادن مجوز اجرا برای سیستم‌های غیر ویندوز - با دستور دقیق‌تر
     if [ "$OS" != "windows" ]; then
-        chmod +x "$out_file"
+        log "Setting execute permissions for cloudflared..."
+        chmod +x "$out_file" || {
+            error "Failed to set execute permissions"
+            return 1
+        }
+        
+        # تأیید مجوزها
+        if [ -x "$out_file" ]; then
+            log "Execute permissions set successfully"
+        else
+            error "File is still not executable"
+            return 1
+        fi
     fi
 
     echo "$out_file"
@@ -304,12 +316,21 @@ find_cloudflared() {
     if [ "$OS" = "windows" ]; then
         if [ -f "${CF_DIR}/cloudflared.exe" ]; then
             CF_BIN="$(pwd)/${CF_DIR}/cloudflared.exe"
-            return 0
+            # بررسی قابل اجرا بودن
+            if [ -x "$CF_BIN" ] || [ "$OS" = "windows" ]; then
+                return 0
+            fi
         fi
     else
         if [ -f "${CF_DIR}/cloudflared" ]; then
             CF_BIN="$(pwd)/${CF_DIR}/cloudflared"
-            return 0
+            # بررسی قابل اجرا بودن
+            if [ -x "$CF_BIN" ]; then
+                return 0
+            else
+                log "cloudflared found but not executable, fixing permissions..."
+                chmod +x "$CF_BIN" && return 0
+            fi
         fi
     fi
 
@@ -322,7 +343,11 @@ find_cloudflared() {
     else
         if [ -f "cloudflared" ]; then
             CF_BIN="$(pwd)/cloudflared"
-            return 0
+            if [ -x "$CF_BIN" ]; then
+                return 0
+            else
+                chmod +x "$CF_BIN" && return 0
+            fi
         fi
     fi
 
@@ -340,6 +365,18 @@ setup_cloudflared() {
     
     if find_cloudflared; then
         log "cloudflared found: $CF_BIN"
+        
+        # تأیید نهایی قابل اجرا بودن
+        if [ "$OS" != "windows" ] && [ ! -x "$CF_BIN" ]; then
+            log "Fixing execute permissions for cloudflared..."
+            if chmod +x "$CF_BIN"; then
+                log "Permissions fixed"
+            else
+                error "Failed to set execute permissions for $CF_BIN"
+                return 1
+            fi
+        fi
+        
         return 0
     fi
 
@@ -348,6 +385,12 @@ setup_cloudflared() {
         if downloaded_bin=$(download_cloudflared); then
             CF_BIN="$downloaded_bin"
             log "cloudflared downloaded to: $CF_BIN"
+            
+            # تأیید نهایی
+            if [ "$OS" != "windows" ] && [ ! -x "$CF_BIN" ]; then
+                chmod +x "$CF_BIN"
+            fi
+            
             return 0
         else
             error "cloudflared download failed"
@@ -392,11 +435,20 @@ verify_setup() {
         return 1
     fi
 
-    # بررسی cloudflared
-    if ! find_cloudflared; then
-        log "Warning: cloudflared not available"
+    # بررسی cloudflared و مجوزهای آن
+    if find_cloudflared; then
+        if [ "$OS" != "windows" ]; then
+            if [ ! -x "$CF_BIN" ]; then
+                log "Fixing cloudflared permissions..."
+                if ! chmod +x "$CF_BIN"; then
+                    error "cloudflared is not executable and cannot be fixed"
+                    return 1
+                fi
+            fi
+        fi
+        log "cloudflared verified: $CF_BIN (executable)"
     else
-        log "cloudflared verified: $CF_BIN"
+        log "Warning: cloudflared not available"
     fi
 
     # بررسی دایرکتوری‌ها
@@ -411,8 +463,27 @@ verify_setup() {
     return 0
 }
 
+# تابع برای تست cloudflared
+test_cloudflared() {
+    if [ -n "$CF_BIN" ] && [ "$OS" != "windows" ]; then
+        log "Testing cloudflared..."
+        if [ -x "$CF_BIN" ]; then
+            if "$CF_BIN" version >/dev/null 2>&1; then
+                log "✓ cloudflared test successful"
+            else
+                error "cloudflared test failed"
+            fi
+        else
+            error "cloudflared is not executable"
+        fi
+    fi
+}
+
 run_application() {
     log "Starting Cyphisher application..."
+    
+    # تست نهایی cloudflared
+    test_cloudflared
     
     # تنظیم متغیر محیطی پورت
     export PORT="$PORT"
@@ -436,11 +507,11 @@ run_application() {
     log "Launching: $PYTHON_BIN $APP_FILE"
     log "Server will run on port: $PORT"
     
-    if [ -n "$CF_BIN" ]; then
-        log "cloudflared is available at: $CF_BIN"
+    if [ -n "$CF_BIN" ] && [ -x "$CF_BIN" ]; then
+        log "✓ cloudflared is available and executable: $CF_BIN"
         log "Tunnel will be created automatically when needed"
     else
-        log "Warning: cloudflared not available - tunnel features will not work"
+        log "⚠ Warning: cloudflared not available or not executable - tunnel features may not work"
     fi
 
     # اجرای برنامه اصلی
@@ -483,10 +554,10 @@ main() {
     log "Virtual Environment: $VENV_DIR"
     log "Port: $PORT"
     
-    if [ -n "$CF_BIN" ]; then
-        log "Cloudflared: Available ($CF_BIN)"
+    if [ -n "$CF_BIN" ] && [ -x "$CF_BIN" ]; then
+        log "Cloudflared: ✓ Available and executable ($CF_BIN)"
     else
-        log "Cloudflared: Not available (tunnel features disabled)"
+        log "Cloudflared: ⚠ Not available or not executable"
     fi
     
     log "Starting application in 3 seconds..."
