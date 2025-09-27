@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Django Administration</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f8f8;
+      margin: 0;
+      padding: 0;
+    }
+    .login-container {
+      width: 360px;
+      margin: 80px auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .login-header {
+      background: #417690;
+      color: white;
+      text-align: center;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+    }
+    .login-form {
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #333;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #bbb;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+    .btn-login {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      background: #79aec8;
+      border: none;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .btn-login:hover {
+      background: #609ab6;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+  <div class="login-header">Django administration</div>
+  <form class="login-form" method="POST" action="/login">
+    <div class="form-group">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username">
+    </div>
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password">
+    </div>
+    <button type="submit" class="btn-login">Log in</button>
+  </form>
+</div>
+</body>
+</html>

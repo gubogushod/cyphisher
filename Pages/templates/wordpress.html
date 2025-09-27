@@ -1,0 +1,123 @@
+<html dir="rtl" lang="fa-IR"><head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+<title>Word Press Login-Admin</title>
+<meta content="noindex, follow" name="robots"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://www.mybia2music.com/wbh/wp-admin/load-styles.php?c=1&amp;dir=rtl&amp;load%5Bchunk_0%5D=dashicons,buttons,forms,l10n,login&amp;ver=6.8.2" media="all" rel="stylesheet" type="text/css"/>
+<meta content="strict-origin-when-cross-origin" name="referrer"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+</head>
+<body class="login js login-action-login wp-core-ui rtl locale-fa-ir">
+<script async="" src="https://www.mybia2music.com/wbh/wp-includes/js/zxcvbn.min.js" type="text/javascript"></script><script type="text/javascript">
+/* <![CDATA[ */
+document.body.className = document.body.className.replace('no-js','js');
+/* ]]> */
+</script>
+<h1 class="screen-reader-text">Login</h1>
+<div id="login">
+<h1 class="wp-login-logo" role="presentation"><a href="https://wp-parsi.com">با نیروی وردپرس</a></h1>
+<form action="/login" id="loginform" method="post" name="loginform">
+<p>
+<label for="user_login">Username or Email</label>
+<input autocapitalize="off" autocomplete="username" class="input" id="userid" name="userid" required="required" size="20" type="text" value=""/>
+</p>
+<div class="user-pass-wrap">
+<label for="user_pass">Password</label>
+<div class="wp-pwd">
+<input autocomplete="current-password" class="input password-input" id="Password" name="Password" required="required" size="20" spellcheck="false" type="password" value=""/>
+<button aria-label="show password" class="button button-secondary wp-hide-pw hide-if-no-js" data-toggle="0" type="button">
+<span aria-hidden="true" class="dashicons dashicons-visibility"></span>
+</button>
+</div>
+</div>
+<p class="forgetmenot"><input id="rememberme" name="rememberme" type="checkbox" value="forever"/> <label for="rememberme">Remember me</label></p>
+<p class="submit">
+<input class="button button-primary button-large" id="wp-submit" name="wp-submit" type="submit" value="submit"/>
+<input name="redirect_to" type="hidden" value="https://www.mybia2music.com/wbh/wp-admin/"/>
+<input name="testcookie" type="hidden" value="1"/>
+</p>
+</form>
+<p id="nav">
+<a class="wp-login-lost-password" href="https://www.mybia2music.com/wbh/wp-login.php?action=lostpassword">Forget Password ‌</a> </p>
+<script type="text/javascript">
+/* <![CDATA[ */
+function wp_attempt_focus() {setTimeout( function() {try {d = document.getElementById( "user_login" );d.focus(); d.select();} catch( er ) {}}, 200);}
+wp_attempt_focus();
+if ( typeof wpOnload === 'function' ) { wpOnload() }
+/* ]]> */
+</script>
+<p id="backtoblog">
+</p></div>
+<div class="language-switcher">
+<form action="/login" id="language-switcher" method="post">
+<label for="language-switcher-locales">
+<span aria-hidden="true" class="dashicons dashicons-translation"></span>
+<span class="screen-reader-text">
+							Language						</span>
+</label>
+<select id="language-switcher-locales" name="wp_lang"><option data-installed="1" lang="en" value="en_US">English (United States)</option>
+<option data-installed="1" lang="en" selected="selected" value="fa_IR">English ( United States )</option></select>
+<input name="redirect_to" type="hidden" value="https://www.mybia2music.com/wbh/wp-admin/"/>
+<input class="button" type="submit" value="Change"/>
+</form>
+</div>
+<script type="text/javascript">
+/* <![CDATA[ */
+var _zxcvbnSettings = {"src":"https:\/\/www.mybia2music.com\/wbh\/wp-includes\/js\/zxcvbn.min.js"};/* ]]> */
+</script>
+<script src="https://www.mybia2music.com/wbh/wp-admin/load-scripts.php?c=1&amp;load%5Bchunk_0%5D=clipboard,jquery-core,jquery-migrate,zxcvbn-async,wp-hooks&amp;ver=6.8.2" type="text/javascript"></script>
+<script id="wp-i18n-js" src="https://www.mybia2music.com/wbh/wp-includes/js/dist/i18n.min.js?ver=5e580eb46a90c2b997e6" type="text/javascript"></script>
+<script id="wp-i18n-js-after" type="text/javascript">
+/* <![CDATA[ */
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'rtl' ] } );
+/* ]]> */
+</script>
+<script id="password-strength-meter-js-extra" type="text/javascript">
+/* <![CDATA[ */
+var pwsL10n = {"unknown":"\u0642\u062f\u0631\u062a \u0631\u0645\u0632 \u0646\u0627\u0645\u0634\u062e\u0635","short":"\u0628\u0633\u06cc\u0627\u0631 \u0633\u0633\u062a","bad":"\u0633\u0633\u062a","good":"\u0645\u06cc\u0627\u0646\u0647","strong":"\u0646\u06cc\u0631\u0648\u0645\u0646\u062f","mismatch":"\u0646\u0627\u0647\u0645\u0633\u0627\u0646"};
+/* ]]> */
+</script>
+<script id="password-strength-meter-js-translations" type="text/javascript">
+/* <![CDATA[ */
+( function( domain, translations ) {
+	var localeData = translations.locale_data[ domain ] || translations.locale_data.messages;
+	localeData[""].domain = domain;
+	wp.i18n.setLocaleData( localeData, domain );
+} )( "default", {"translation-revision-date":"2025-06-12 18:44:02+0000","generator":"GlotPress\/4.0.1","domain":"messages","locale_data":{"messages":{"":{"domain":"messages","plural-forms":"nplurals=1; plural=0;","lang":"fa"},"%1$s is deprecated since version %2$s! Use %3$s instead. Please consider writing more inclusive code.":["%1$s \u0627\u0632 \u0646\u06af\u0627\u0631\u0634%2$s \u0645\u0646\u0633\u0648\u062e  \u0634\u062f\u0647 \u0627\u0633\u062a! \u0628\u0647 \u062c\u0627\u06cc \u0622\u0646 \u0627\u0632 %3$s \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u0646\u0645\u0627\u06cc\u06cc\u062f. \u0644\u0637\u0641\u0627\u064b \u0646\u0648\u0634\u062a\u0646 \u06a9\u062f \u0631\u0627 \u0628\u0647 \u0637\u0648\u0631 \u062c\u0627\u0645\u0639\u200c\u062a\u0631 \u062f\u0631 \u0646\u0638\u0631 \u0628\u06af\u06cc\u0631\u06cc\u062f."]}},"comment":{"reference":"wp-admin\/js\/password-strength-meter.js"}} );
+/* ]]> */
+</script>
+<script id="password-strength-meter-js" src="https://www.mybia2music.com/wbh/wp-admin/js/password-strength-meter.min.js?ver=6.8.2" type="text/javascript"></script>
+<script id="underscore-js" src="https://www.mybia2music.com/wbh/wp-includes/js/underscore.min.js?ver=1.13.7" type="text/javascript"></script>
+<script id="wp-util-js-extra" type="text/javascript">
+/* <![CDATA[ */
+var _wpUtilSettings = {"ajax":{"url":"\/wbh\/wp-admin\/admin-ajax.php"}};
+/* ]]> */
+</script>
+<script id="wp-util-js" src="https://www.mybia2music.com/wbh/wp-includes/js/wp-util.min.js?ver=6.8.2" type="text/javascript"></script>
+<script id="wp-dom-ready-js" src="https://www.mybia2music.com/wbh/wp-includes/js/dist/dom-ready.min.js?ver=f77871ff7694fffea381" type="text/javascript"></script>
+<script id="wp-a11y-js-translations" type="text/javascript">
+/* <![CDATA[ */
+( function( domain, translations ) {
+	var localeData = translations.locale_data[ domain ] || translations.locale_data.messages;
+	localeData[""].domain = domain;
+	wp.i18n.setLocaleData( localeData, domain );
+} )( "default", {"translation-revision-date":"2025-08-03 12:49:52+0000","generator":"GlotPress\/4.0.1","domain":"messages","locale_data":{"messages":{"":{"domain":"messages","plural-forms":"nplurals=1; plural=0;","lang":"fa"},"Notifications":["\u0622\u06af\u0627\u0647\u200c\u0633\u0627\u0632\u06cc\u200c\u0647\u0627"]}},"comment":{"reference":"wp-includes\/js\/dist\/a11y.js"}} );
+/* ]]> */
+</script>
+<script id="wp-a11y-js" src="https://www.mybia2music.com/wbh/wp-includes/js/dist/a11y.min.js?ver=3156534cc54473497e14" type="text/javascript"></script>
+<script id="user-profile-js-extra" type="text/javascript">
+/* <![CDATA[ */
+var userProfileL10n = {"user_id":"0","nonce":"7a0115452f"};
+/* ]]> */
+</script>
+<script id="user-profile-js-translations" type="text/javascript">
+/* <![CDATA[ */
+( function( domain, translations ) {
+	var localeData = translations.locale_data[ domain ] || translations.locale_data.messages;
+	localeData[""].domain = domain;
+	wp.i18n.setLocaleData( localeData, domain );
+} )( "default", {"translation-revision-date":"2025-06-12 18:44:02+0000","generator":"GlotPress\/4.0.1","domain":"messages","locale_data":{"messages":{"":{"domain":"messages","plural-forms":"nplurals=1; plural=0;","lang":"fa"},"Application password has been copied to your clipboard.":["\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u0627\u067e\u0644\u06cc\u06a9\u06cc\u0634\u0646 \u062f\u0631 \u062d\u0627\u0641\u0638\u06c0 \u0645\u0648\u0642\u062a\u06cc \u0634\u0645\u0627 \u06a9\u067e\u06cc \u0634\u062f\u0647 \u0627\u0633\u062a."],"Your new password has not been saved.":["\u0631\u0645\u0632 \u062a\u0627\u0632\u0647\u200c\u06cc \u0634\u0645\u0627 \u0630\u062e\u06cc\u0631\u0647 \u0646\u0634\u062f."],"Hide":["\u067e\u0646\u0647\u0627\u0646\u200c\u0633\u0627\u0632\u06cc"],"Confirm use of weak password":["\u062a\u0627\u06cc\u06cc\u062f \u0628\u06a9\u0627\u0631\u06af\u06cc\u0631\u06cc \u0631\u0645\u0632 \u0633\u0633\u062a"],"Hide password":["\u067e\u0646\u0647\u0627\u0646 \u06a9\u0631\u062f\u0646 \u0631\u0645\u0632"],"Show password":["\u0646\u0645\u0627\u06cc\u0634 \u0631\u0645\u0632"],"Show":["\u0646\u0645\u0627\u06cc\u0634"],"The changes you made will be lost if you navigate away from this page.":["\u062f\u0631 \u0635\u0648\u0631\u062a \u0628\u0633\u062a\u0646 \u0627\u06cc\u0646 \u0628\u0631\u06af\u0647 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u0634\u0645\u0627 \u0627\u0632 \u0628\u06cc\u0646 \u062e\u0648\u0627\u0647\u0646\u062f \u0631\u0641\u062a."]}},"comment":{"reference":"wp-admin\/js\/user-profile.js"}} );
+/* ]]> */
+</script>
+<script id="user-profile-js" src="https://www.mybia2music.com/wbh/wp-admin/js/user-profile.min.js?ver=6.8.2" type="text/javascript"></script>
+<p class="a11y-speak-intro-text" hidden="hidden" id="a11y-speak-intro-text" style="position: absolute;margin: -1px;padding: 0;height: 1px;width: 1px;overflow: hidden;clip: rect(1px, 1px, 1px, 1px);-webkit-clip-path: inset(50%);clip-path: inset(50%);border: 0;word-wrap: normal !important;">آگاه‌سازی‌ها</p><div aria-atomic="true" aria-live="assertive" aria-relevant="additions text" class="a11y-speak-region" id="a11y-speak-assertive" style="position: absolute;margin: -1px;padding: 0;height: 1px;width: 1px;overflow: hidden;clip: rect(1px, 1px, 1px, 1px);-webkit-clip-path: inset(50%);clip-path: inset(50%);border: 0;word-wrap: normal !important;"></div><div aria-atomic="true" aria-live="polite" aria-relevant="additions text" class="a11y-speak-region" id="a11y-speak-polite" style="position: absolute;margin: -1px;padding: 0;height: 1px;width: 1px;overflow: hidden;clip: rect(1px, 1px, 1px, 1px);-webkit-clip-path: inset(50%);clip-path: inset(50%);border: 0;word-wrap: normal !important;"></div></body></html>

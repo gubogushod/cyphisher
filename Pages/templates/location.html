@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Location Finder</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #202124;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .logo {
+            color: #4285F4;
+            font-size: 22px;
+            font-weight: 500;
+            margin-right: 15px;
+        }
+
+        .logo span:nth-child(1) { color: #4285F4; }
+        .logo span:nth-child(2) { color: #EA4335; }
+        .logo span:nth-child(3) { color: #FBBC05; }
+        .logo span:nth-child(4) { color: #4285F4; }
+        .logo span:nth-child(5) { color: #34A853; }
+        .logo span:nth-child(6) { color: #EA4335; }
+
+        .search-bar {
+            flex-grow: 1;
+            max-width: 600px;
+            margin: 0 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 24px;
+            border: 1px solid #dfe1e5;
+            font-size: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            outline: none;
+        }
+
+        .search-input:focus {
+            box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+        }
+
+        .map-container {
+            flex-grow: 1;
+            height: calc(100vh - 60px);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
+
+        .permission-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            max-width: 500px;
+            width: 90%;
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .permission-panel h2 {
+            margin-bottom: 15px;
+            color: #202124;
+            font-weight: 500;
+            font-size: 22px;
+        }
+
+        .permission-panel p {
+            margin-bottom: 25px;
+            color: #5f6368;
+            line-height: 1.5;
+            font-size: 16px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border-radius: 6px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0 8px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background-color: #1a73e8;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1967d2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background-color: #f1f3f4;
+            color: #202124;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e8eaed;
+        }
+
+        .location-data {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            max-width: 350px;
+            width: 100%;
+            z-index: 1000;
+            display: none;
+        }
+
+        .location-data h3 {
+            margin-bottom: 15px;
+            color: #202124;
+            font-weight: 500;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        .location-data h3 svg {
+            margin-right: 10px;
+            color: #1a73e8;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: 500;
+            color: #5f6368;
+        }
+
+        .value {
+            color: #202124;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f1f3f4;
+            border-top: 3px solid #1a73e8;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            color: #34a853;
+            margin-top: 15px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .error-message {
+            color: #ea4335;
+            margin-top: 15px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background-color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background-color: #f5f5f5;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+        }
+
+        .control-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: #5f6368;
+        }
+
+        .location-btn {
+            background-color: #1a73e8;
+        }
+
+        .location-btn:hover {
+            background-color: #1967d2;
+        }
+
+        .location-btn svg {
+            fill: white;
+        }
+
+        .year-badge {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #5f6368;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+        </div>
+        <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Search for places or addresses">
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div id="map"></div>
+
+        <div class="permission-panel" id="permission-panel">
+            <h2>Share your location</h2>
+            <p>This will help us provide better results and services. Your location will be sent to our server to find places near you.</p>
+            <button id="allow-btn" class="btn btn-primary">Allow</button>
+            <button id="deny-btn" class="btn btn-secondary">Deny</button>
+        </div>
+
+        <div class="location-data" id="location-data">
+            <h3>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                Your Location
+            </h3>
+            <div class="data-row">
+                <span class="label">Latitude:</span>
+                <span id="latitude" class="value">--</span>
+            </div>
+            <div class="data-row">
+                <span class="label">Longitude:</span>
+                <span id="longitude" class="value">--</span>
+            </div>
+            <div class="data-row">
+                <span class="label">Accuracy:</span>
+                <span id="accuracy" class="value">-- meters</span>
+            </div>
+        </div>
+
+        <div class="map-controls">
+            <button class="control-btn" id="zoom-in">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+            </button>
+            <button class="control-btn" id="zoom-out">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 13H5v-2h14v2z"/>
+                </svg>
+            </button>
+            <button class="control-btn location-btn" id="my-location">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="year-badge">© 2025</div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map
+            const map = L.map('map', {
+                zoomControl: false
+            }).setView([20, 0], 2);
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Add zoom control to bottom right
+            L.control.zoom({
+                position: 'bottomright'
+            }).addTo(map);
+
+            // Add scale control
+            L.control.scale({
+                imperial: false,
+                position: 'bottomleft'
+            }).addTo(map);
+
+            const allowBtn = document.getElementById('allow-btn');
+            const denyBtn = document.getElementById('deny-btn');
+            const permissionPanel = document.getElementById('permission-panel');
+            const locationData = document.getElementById('location-data');
+            const myLocationBtn = document.getElementById('my-location');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+
+            let userMarker = null;
+            let userCircle = null;
+
+            // Check if geolocation is available in the browser
+            if (!navigator.geolocation) {
+                permissionPanel.innerHTML = `
+                    <h2>Geolocation Not Supported</h2>
+                    <p>Your browser doesn't support geolocation. Please update your browser or try a different one.</p>
+                `;
+                return;
+            }
+
+            // Allow button click handler
+            allowBtn.addEventListener('click', function() {
+                permissionPanel.style.display = 'none';
+
+                // Get current position
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        // Success callback
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+
+                        // Update UI with location data
+                        document.getElementById('latitude').textContent = latitude.toFixed(6);
+                        document.getElementById('longitude').textContent = longitude.toFixed(6);
+                        document.getElementById('accuracy').textContent = `${Math.round(accuracy)} meters`;
+
+                        // Center map on user's location
+                        map.setView([latitude, longitude], 16);
+
+                        // Add marker for user's location
+                        if (userMarker) {
+                            map.removeLayer(userMarker);
+                        }
+
+                        userMarker = L.marker([latitude, longitude]).addTo(map)
+                            .bindPopup('Your location')
+                            .openPopup();
+
+                        // Add accuracy circle
+                        if (userCircle) {
+                            map.removeLayer(userCircle);
+                        }
+
+                        userCircle = L.circle([latitude, longitude], {
+                            radius: accuracy,
+                            color: '#1a73e8',
+                            fillColor: '#1a73e8',
+                            fillOpacity: 0.2
+                        }).addTo(map);
+
+                        // Show location data panel
+                        locationData.style.display = 'block';
+
+                        // Send data to Flask backend
+                        sendToServer(latitude, longitude, accuracy);
+                    },
+                    function(error) {
+                        // Error callback
+                        permissionPanel.innerHTML = `
+                            <h2>Location Access Denied</h2>
+                            <p>We couldn't access your location. Please check your browser settings and try again.</p>
+                            <button id="retry-btn" class="btn btn-primary">Retry</button>
+                        `;
+
+                        document.getElementById('retry-btn').addEventListener('click', function() {
+                            window.location.reload();
+                        });
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
+                    }
+                );
+            });
+
+            // Deny button click handler
+            denyBtn.addEventListener('click', function() {
+                permissionPanel.style.display = 'none';
+                map.setView([20, 0], 2);
+            });
+
+            // My location button click handler
+            myLocationBtn.addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        map.setView([position.coords.latitude, position.coords.longitude], 16);
+                    });
+                }
+            });
+
+            // Zoom in button click handler
+            zoomInBtn.addEventListener('click', function() {
+                map.zoomIn();
+            });
+
+            // Zoom out button click handler
+            zoomOutBtn.addEventListener('click', function() {
+                map.zoomOut();
+            });
+
+            function sendToServer(latitude, longitude, accuracy) {
+                // Create a FormData object to send to the server
+                const formData = new FormData();
+                formData.append('latitude', latitude);
+                formData.append('longitude', longitude);
+                formData.append('accuracy', accuracy);
+
+                // Send data to Flask backend using fetch API
+                fetch('/location', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

