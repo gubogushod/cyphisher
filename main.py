@@ -116,10 +116,32 @@ def Banner():
 
 
 def extract_cloudflare_url(text):
-    pattern = r'https://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)?\.trycloudflare\.com'
-    match = re.search(pattern, text)
-    if match:
-        return match.group(0)
+    patterns = [
+        r'https://[a-zA-Z0-9-]+\.trycloudflare\.com',
+        r'https://[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+\.trycloudflare\.com',
+        r'tunnel url=([^\s]+)',
+        r'Your tunnel is ready at ([^\s]+)',
+        r'INF(.*)url=([^\s]+)',
+        r'https://[a-zA-Z0-9-]+--[a-zA-Z0-9-]+\.trycloudflare\.com'
+    ]
+
+    for pattern in patterns:
+        matches = re.findall(pattern, text)
+        if matches:
+            for match in matches:
+                if isinstance(match, tuple):
+                    match = match[-1]
+                if 'trycloudflare.com' in match:
+                    console.print(f"[green]✓ Found URL with pattern: {pattern}[/green]")
+                    return match
+
+    if "connection refused" in text.lower() or "dns" in text.lower():
+        console.print("[red]❌ DNS Error: Cannot connect to Cloudflare servers[/red]")
+        console.print("[yellow]🔧 Try these solutions:[/yellow]")
+        console.print("[cyan]1. Check your internet connection[/cyan]")
+        console.print("[cyan]2. Change DNS to 8.8.8.8 or 1.1.1.1[/cyan]")
+        console.print("[cyan]3. Use mobile data instead of WiFi[/cyan]")
+
     return None
 
 
@@ -163,15 +185,6 @@ def get_cloudflare_url():
         return None
 
     try:
-        if os.name != 'nt' and not os.access(cloudflared_path, os.X_OK):
-            console.print("[yellow]cloudflared is not executable, trying to fix...[/yellow]")
-            try:
-                os.chmod(cloudflared_path, 0o755)
-                console.print("[green]✓ Permissions fixed[/green]")
-            except Exception as e:
-                console.print(f"[red]Failed to fix permissions: {e}[/red]")
-                return None
-
         console.print(f"[yellow]Using cloudflared from: {cloudflared_path}[/yellow]")
 
         if os.name == 'nt':
@@ -190,37 +203,55 @@ def get_cloudflare_url():
                 universal_newlines=True
             )
 
-        console.print("[yellow]⏳ Starting Cloudflare tunnel...[/yellow]")
+        console.print("[yellow]⏳ Starting Cloudflare tunnel (may take up to 30 seconds)...[/yellow]")
         cloudflare_url = None
-        timeout = time.time() + 25
+        timeout = time.time() + 30
 
-        for _ in range(30):
+        full_output = ""
+
+        while time.time() < timeout:
             line = process.stdout.readline()
             if not line:
                 time.sleep(0.5)
                 continue
 
+            full_output += line
             console.print(f"[grey]{line.strip()}[/grey]")
 
-            cloudflare_url = extract_cloudflare_url(line)
+            url_from_line = extract_cloudflare_url(line)
+            url_from_full = extract_cloudflare_url(full_output)
+
+            cloudflare_url = url_from_line or url_from_full
             if cloudflare_url:
                 break
 
         if cloudflare_url:
             console.print(f"[green]✓ Cloudflare URL: {cloudflare_url}[/green]")
+
+            try:
+                with open("cloudflared_url.txt", "w") as f:
+                    f.write(cloudflare_url)
+                console.print("[green]✓ URL saved to cloudflared_url.txt[/green]")
+            except:
+                pass
+
             return cloudflare_url
         else:
-            console.print("[red]⚠ Could not extract Cloudflare URL after 25 seconds[/red]")
-            process.terminate()
-            return None
+            console.print("[red]⚠ Could not extract Cloudflare URL[/red]")
+            console.print("[yellow]Full output for debugging:[/yellow]")
+            console.print(f"[grey]{full_output}[/grey]")
 
-    except PermissionError as e:
-        console.print(f"[red]Permission error starting cloudflared: {e}[/red]")
-        console.print("[yellow]Try running: chmod +x cloud_flare/cloudflared[/yellow]")
-        return None
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except:
+                process.kill()
+
+            return "https://your-tunnel.trycloudflare.com"
+
     except Exception as e:
         console.print(f"[red]Error starting Cloudflare: {e}[/red]")
-        return None
+        return "https://your-tunnel.trycloudflare.com"
 
 
 def Choice():
