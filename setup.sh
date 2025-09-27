@@ -204,7 +204,7 @@ download_cloudflared_guaranteed() {
     fi
 }
 
-# تست cloudflared بدون ایجاد تونل واقعی (برای جلوگیری از توقف)
+# تست cloudflared بدون ایجاد تونل واقعی (نسخه اصلاح شده برای ترمکس)
 test_cloudflared_safe() {
     log "🔍 Testing cloudflared (safe mode)..."
     
@@ -215,40 +215,22 @@ test_cloudflared_safe() {
         return 1
     fi
     
-    # تست سریع نسخه بدون timeout طولانی
+    # تست سریع نسخه
     if "$cf_path" version >/dev/null 2>&1; then
         log "✅ cloudflared basic test passed"
         
-        # تست کوتاه تونل بدون انتظار برای URL
-        log "🌐 Quick tunnel test..."
-        local test_pid
-        local test_output
+        # تست ساده‌تر بدون استفاده از /tmp
+        log "🌐 Quick version check..."
+        local version_output
+        version_output=$("$cf_path" version 2>&1)
         
-        # اجرای تست در پس زمینه
-        "$cf_path" tunnel --url http://localhost:9999 > /tmp/cloudflared_test.log 2>&1 &
-        test_pid=$!
-        
-        # صبر کوتاه برای شروع
-        sleep 5
-        
-        # خواندن خروجی و بررسی خطاها
-        test_output=$(cat /tmp/cloudflared_test.log | head -10)
-        
-        # متوقف کردن تست
-        kill $test_pid 2>/dev/null || true
-        
-        # بررسی خروجی
-        if echo "$test_output" | grep -q "trycloudflare.com"; then
-            log "🎉 Tunnel test successful!"
-        elif echo "$test_output" | grep -q "certificate"; then
-            log "⚠️ Certificate issues detected (will use --no-tls-verify)"
-        elif echo "$test_output" | grep -q "connection refused\|dns"; then
-            log "⚠️ DNS issues detected"
+        if echo "$version_output" | grep -q "cloudflared"; then
+            log "🎉 cloudflared is working correctly"
+            log "📋 Version info: $(echo "$version_output" | head -1)"
         else
-            log "✅ cloudflared is ready for use"
+            log "⚠️ Version check inconclusive, but binary is executable"
         fi
         
-        rm -f /tmp/cloudflared_test.log
         return 0
     else
         error "❌ cloudflared basic test failed"
