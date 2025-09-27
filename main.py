@@ -115,32 +115,30 @@ def Banner():
     console.print("\n")
 
 
+
 def extract_cloudflare_url(text):
     patterns = [
-        r'https://[a-zA-Z0-9-]+\.trycloudflare\.com',
         r'https://[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+\.trycloudflare\.com',
-        r'tunnel url=([^\s]+)',
-        r'Your tunnel is ready at ([^\s]+)',
-        r'INF(.*)url=([^\s]+)',
-        r'https://[a-zA-Z0-9-]+--[a-zA-Z0-9-]+\.trycloudflare\.com'
+        r'https://[a-zA-Z0-9-]+--[a-zA-Z0-9-]+\.trycloudflare\.com',
+        r'https://[a-zA-Z0-9-]+\.trycloudflare\.com',
+        r'\|\s+(https://[^\s]+)',
+        r'url=([^\s]+)',
+        r'at (https://[^\s]+)',
+        r'Ready at (https://[^\s]+)',
+        r'quick Tunnel has been created at (https://[^\s]+)'
     ]
 
     for pattern in patterns:
-        matches = re.findall(pattern, text)
-        if matches:
-            for match in matches:
-                if isinstance(match, tuple):
-                    match = match[-1]
-                if 'trycloudflare.com' in match:
-                    console.print(f"[green]✓ Found URL with pattern: {pattern}[/green]")
-                    return match
-
-    if "connection refused" in text.lower() or "dns" in text.lower():
-        console.print("[red]❌ DNS Error: Cannot connect to Cloudflare servers[/red]")
-        console.print("[yellow]🔧 Try these solutions:[/yellow]")
-        console.print("[cyan]1. Check your internet connection[/cyan]")
-        console.print("[cyan]2. Change DNS to 8.8.8.8 or 1.1.1.1[/cyan]")
-        console.print("[cyan]3. Use mobile data instead of WiFi[/cyan]")
+        try:
+            matches = re.findall(pattern, text)
+            if matches:
+                for match in matches:
+                    if 'trycloudflare.com' in match and 'api.trycloudflare.com' not in match:
+                        url = match.strip().rstrip('|').strip()
+                        if url.startswith('http'):
+                            return url
+        except:
+            continue
 
     return None
 
@@ -148,9 +146,7 @@ def extract_cloudflare_url(text):
 def get_cloudflare_url():
     possible_paths = [
         os.path.join(BASE_DIR, "cloud_flare", "cloudflared"),
-        os.path.join(BASE_DIR, "cloud_flare", "cloudflared.exe"),
         os.path.join(BASE_DIR, "cloudflared"),
-        os.path.join(BASE_DIR, "cloudflared.exe"),
         "cloudflared"
     ]
 
@@ -160,36 +156,19 @@ def get_cloudflare_url():
             if os.name != 'nt' and not os.access(path, os.X_OK):
                 try:
                     os.chmod(path, 0o755)
-                    console.print(f"[yellow]Fixed permissions for: {path}[/yellow]")
-                except Exception as e:
-                    console.print(f"[red]Failed to set permissions for {path}: {e}[/red]")
-                    continue
-
+                except:
+                    pass
             cloudflared_path = path
             break
-        elif path == "cloudflared":
-            try:
-                if os.name == 'nt':
-                    result = subprocess.run(["where", "cloudflared"], capture_output=True, text=True, timeout=5)
-                else:
-                    result = subprocess.run(["which", "cloudflared"], capture_output=True, text=True, timeout=5)
-
-                if result.returncode == 0:
-                    cloudflared_path = "cloudflared"
-                    break
-            except:
-                pass
 
     if not cloudflared_path:
         console.print("[red]cloudflared not found![/red]")
-        return None
+        return "https://your-tunnel.trycloudflare.com"
 
     try:
-        console.print(f"[yellow]Using cloudflared from: {cloudflared_path}[/yellow]")
-
         if os.name == 'nt':
             process = subprocess.Popen(
-                [cloudflared_path, "tunnel", "--url", "http://localhost:5001"],
+                [cloudflared_path, "tunnel", "--url", "http://localhost:5001", "--no-tls-verify"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
@@ -197,7 +176,7 @@ def get_cloudflare_url():
             )
         else:
             process = subprocess.Popen(
-                [cloudflared_path, "tunnel", "--url", "http://localhost:5001"],
+                [cloudflared_path, "tunnel", "--url", "http://localhost:5001", "--no-tls-verify"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True
@@ -206,7 +185,6 @@ def get_cloudflare_url():
         console.print("[yellow]⏳ Starting Cloudflare tunnel (may take up to 30 seconds)...[/yellow]")
         cloudflare_url = None
         timeout = time.time() + 30
-
         full_output = ""
 
         while time.time() < timeout:
@@ -218,14 +196,17 @@ def get_cloudflare_url():
             full_output += line
             console.print(f"[grey]{line.strip()}[/grey]")
 
-            url_from_line = extract_cloudflare_url(line)
-            url_from_full = extract_cloudflare_url(full_output)
-
-            cloudflare_url = url_from_line or url_from_full
-            if cloudflare_url:
+            url = extract_cloudflare_url(line)
+            if url:
+                cloudflare_url = url
                 break
 
-        if cloudflare_url:
+            url_from_full = extract_cloudflare_url(full_output)
+            if url_from_full:
+                cloudflare_url = url_from_full
+                break
+
+        if cloudflare_url and "api.trycloudflare.com" not in cloudflare_url:
             console.print(f"[green]✓ Cloudflare URL: {cloudflare_url}[/green]")
 
             try:
@@ -235,19 +216,24 @@ def get_cloudflare_url():
             except:
                 pass
 
+            process.terminate()
             return cloudflare_url
         else:
-            console.print("[red]⚠ Could not extract Cloudflare URL[/red]")
-            console.print("[yellow]Full output for debugging:[/yellow]")
-            console.print(f"[grey]{full_output}[/grey]")
+            console.print("[red]⚠ Could not extract valid Cloudflare URL[/red]")
+            console.print("[yellow]Trying to extract from full output...[/yellow]")
 
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except:
-                process.kill()
+            final_url = extract_cloudflare_url(full_output)
+            if final_url and "api.trycloudflare.com" not in final_url:
+                console.print(f"[green]✓ Found URL from full output: {final_url}[/green]")
+                process.terminate()
+                return final_url
+            else:
+                console.print("[red]❌ No valid URL found in output[/red]")
+                console.print("[yellow]Full output for debugging:[/yellow]")
+                console.print(f"[grey]{full_output}[/grey]")
 
-            return "https://your-tunnel.trycloudflare.com"
+                process.terminate()
+                return "https://your-tunnel.trycloudflare.com"
 
     except Exception as e:
         console.print(f"[red]Error starting Cloudflare: {e}[/red]")
