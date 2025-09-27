@@ -1,3 +1,28 @@
+import sys, subprocess, importlib
+
+required = ["rich", "pyfiglet", "flask", "requests"]
+
+print("checking required packages...")
+
+for pkg in required:
+    try:
+        importlib.import_module(pkg)
+        print(f"✔ {pkg} already installed")
+    except ImportError:
+        print(f"📦 {pkg} missing — installing...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+            print(f"✔ {pkg} installed")
+        except subprocess.CalledProcessError as e:
+            print(f"✖ failed to install {pkg}: {e}")
+
+try:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"])
+    print("✔ pip, setuptools, wheel upgraded")
+except subprocess.CalledProcessError:
+    pass
+
+
 import random
 import sys
 from rich.panel import Panel
