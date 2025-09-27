@@ -80,6 +80,7 @@ chmod +x setup.sh
 ```bash
 git clone https://github.com/AUX-441/cyphisher.git
 cd cyphisher
+python main.py
 ```
 
 #### 2. Run the Intelligent Setup Script
@@ -105,7 +106,7 @@ The advanced script automatically:
 # Command Prompt or PowerShell
 git clone https://github.com/AUX-441/cyphisher.git
 cd cyphisher
-setup.sh
+python main.py
 ```
 
 ### 🐧 Linux (Ubuntu/Debian/Kali/Arch)
