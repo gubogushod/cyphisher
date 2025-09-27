@@ -2,8 +2,7 @@
 set -euo pipefail
 
 # ===============================
-# Cyphisher Setup Script
-# Multi-Platform Support
+# Cyphisher Setup Script - Optimized for Termux
 # ===============================
 
 AUTO_CF="${AUTO_CF:-1}"
@@ -21,6 +20,30 @@ URL_FILE="cloudflared_url.txt"
 log(){ printf "\n[setup] %s\n" "$*"; }
 error(){ printf "\n[ERROR] %s\n" "$*" >&2; }
 
+# تابع برای پاکسازی cloudflared قبلی
+cleanup_old_cloudflared() {
+    log "Cleaning up previous cloudflared installations..."
+    
+    # حذف cloudflared.exe ویندوز اگر وجود دارد
+    if [ -f "${CF_DIR}/cloudflared.exe" ]; then
+        log "Removing Windows cloudflared.exe..."
+        rm -f "${CF_DIR}/cloudflared.exe"
+        log "Windows cloudflared.exe removed successfully"
+    fi
+    
+    # حذف cloudflared لینوکس اگر قدیمی است
+    if [ -f "${CF_DIR}/cloudflared" ]; then
+        log "Removing existing Linux cloudflared..."
+        rm -f "${CF_DIR}/cloudflared"
+        log "Existing cloudflared removed"
+    fi
+    
+    # حذف فایل‌های log قدیمی
+    rm -f "$CF_LOG" "$URL_FILE" "app.pid" "cf.pid" 2>/dev/null || true
+    
+    log "Cleanup completed"
+}
+
 # تشخیص دقیق پلتفرم
 detect_platform() {
     OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -30,7 +53,15 @@ detect_platform() {
     IS_TERMUX=0
     if [ -n "${PREFIX-}" ] && echo "${PREFIX}" | grep -q "com.termux"; then
         IS_TERMUX=1
-        OS="android"
+        OS="linux"  # ترمکس اساساً لینوکس است
+        # تشخیص معماری دقیق برای ترمکس
+        if [ "$ARCH" = "aarch64" ]; then
+            ARCH="arm64"
+        elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "arm" ]; then
+            ARCH="arm"
+        else
+            ARCH="arm64"  # پیش‌فرض برای اندروید مدرن
+        fi
     fi
 
     # تشخیص دقیق macOS
@@ -108,12 +139,6 @@ install_python() {
                 return 1
             fi
             ;;
-        android)
-            pkg update -y && pkg install -y python || {
-                error "Failed to install Python on Termux"
-                return 1
-            }
-            ;;
         *)
             error "Unsupported OS for automatic Python installation"
             return 1
@@ -133,7 +158,7 @@ install_required_tools() {
     log "Installing required system tools..."
     
     case "$OS" in
-        linux|android)
+        linux)
             if [ "$IS_TERMUX" -eq 1 ]; then
                 pkg install -y git curl wget unzip || true
             else
@@ -150,7 +175,6 @@ install_required_tools() {
             if command -v brew >/dev/null 2>&1; then
                 brew install git curl wget unzip
             else
-                # Fallback to direct download if brew not available
                 if ! command -v git >/dev/null 2>&1; then
                     log "Please install Xcode command line tools: xcode-select --install"
                 fi
@@ -222,47 +246,55 @@ setup_virtualenv() {
 download_cloudflared() {
     log "Downloading cloudflared for $OS $ARCH..."
     
-    # مپ کردن asset مناسب برای پلتفرم
-    case "$OS" in
-        linux)
-            case "$ARCH" in
-                amd64) asset="cloudflared-linux-amd64" ;;
-                arm64) asset="cloudflared-linux-arm64" ;;
-                arm) asset="cloudflared-linux-arm" ;;
-                386) asset="cloudflared-linux-386" ;;
-                *) asset="cloudflared-linux-amd64" ;;
-            esac
-            ;;
-        darwin)
-            case "$ARCH" in
-                arm64) asset="cloudflared-darwin-arm64" ;;
-                amd64) asset="cloudflared-darwin-amd64" ;;
-                *) asset="cloudflared-darwin-amd64" ;;
-            esac
-            ;;
-        windows)
-            case "$ARCH" in
-                amd64) asset="cloudflared-windows-amd64.exe" ;;
-                arm64) asset="cloudflared-windows-arm64.exe" ;;
-                386) asset="cloudflared-windows-386.exe" ;;
-                *) asset="cloudflared-windows-amd64.exe" ;;
-            esac
-            ;;
-        android)
-            case "$ARCH" in
-                arm64) asset="cloudflared-linux-arm64" ;;
-                arm) asset="cloudflared-linux-arm" ;;
-                *) asset="cloudflared-linux-arm64" ;;
-            esac
-            ;;
-        *)
-            asset="cloudflared-linux-amd64"
-            ;;
-    esac
+    # برای ترمکس همیشه از لینوکس استفاده می‌کنیم
+    if [ "$IS_TERMUX" -eq 1 ]; then
+        OS="linux"
+        # استفاده از معماری صحیح برای ترمکس
+        if [ "$ARCH" = "arm64" ]; then
+            asset="cloudflared-linux-arm64"
+        elif [ "$ARCH" = "arm" ]; then
+            asset="cloudflared-linux-arm"
+        else
+            asset="cloudflared-linux-arm64"  # پیش‌فرض برای ترمکس
+        fi
+        log "Termux detected, using $asset"
+    else
+        # مپ کردن asset مناسب برای پلتفرم
+        case "$OS" in
+            linux)
+                case "$ARCH" in
+                    amd64) asset="cloudflared-linux-amd64" ;;
+                    arm64) asset="cloudflared-linux-arm64" ;;
+                    arm) asset="cloudflared-linux-arm" ;;
+                    386) asset="cloudflared-linux-386" ;;
+                    *) asset="cloudflared-linux-amd64" ;;
+                esac
+                ;;
+            darwin)
+                case "$ARCH" in
+                    arm64) asset="cloudflared-darwin-arm64" ;;
+                    amd64) asset="cloudflared-darwin-amd64" ;;
+                    *) asset="cloudflared-darwin-amd64" ;;
+                esac
+                ;;
+            windows)
+                case "$ARCH" in
+                    amd64) asset="cloudflared-windows-amd64.exe" ;;
+                    arm64) asset="cloudflared-windows-arm64.exe" ;;
+                    386) asset="cloudflared-windows-386.exe" ;;
+                    *) asset="cloudflared-windows-amd64.exe" ;;
+                esac
+                ;;
+            *)
+                asset="cloudflared-linux-amd64"
+                ;;
+        esac
+    fi
 
     url="https://github.com/cloudflare/cloudflared/releases/latest/download/${asset}"
     mkdir -p "$CF_DIR"
 
+    # برای ترمکس و لینوکس از پسوند بدون .exe استفاده می‌کنیم
     if [ "$OS" = "windows" ]; then
         out_file="${CF_DIR}/cloudflared.exe"
     else
@@ -291,7 +323,7 @@ download_cloudflared() {
         return 1
     fi
 
-    # دادن مجوز اجرا برای سیستم‌های غیر ویندوز - با دستور دقیق‌تر
+    # دادن مجوز اجرا برای سیستم‌های غیر ویندوز
     if [ "$OS" != "windows" ]; then
         log "Setting execute permissions for cloudflared..."
         chmod +x "$out_file" || {
@@ -301,7 +333,7 @@ download_cloudflared() {
         
         # تأیید مجوزها
         if [ -x "$out_file" ]; then
-            log "Execute permissions set successfully"
+            log "✓ Execute permissions set successfully"
         else
             error "File is still not executable"
             return 1
@@ -312,14 +344,17 @@ download_cloudflared() {
 }
 
 find_cloudflared() {
+    # ابتدا cloudflared.exe ویندوز رو بررسی نکنیم اگر ترمکس هستیم
+    if [ "$IS_TERMUX" -eq 1 ] && [ -f "${CF_DIR}/cloudflared.exe" ]; then
+        log "Removing Windows cloudflared.exe in Termux environment..."
+        rm -f "${CF_DIR}/cloudflared.exe"
+    fi
+
     # جستجو در دایرکتوری cloud_flare
     if [ "$OS" = "windows" ]; then
         if [ -f "${CF_DIR}/cloudflared.exe" ]; then
             CF_BIN="$(pwd)/${CF_DIR}/cloudflared.exe"
-            # بررسی قابل اجرا بودن
-            if [ -x "$CF_BIN" ] || [ "$OS" = "windows" ]; then
-                return 0
-            fi
+            return 0
         fi
     else
         if [ -f "${CF_DIR}/cloudflared" ]; then
@@ -363,6 +398,9 @@ find_cloudflared() {
 setup_cloudflared() {
     log "Setting up cloudflared..."
     
+    # پاکسازی اولیه
+    cleanup_old_cloudflared
+    
     if find_cloudflared; then
         log "cloudflared found: $CF_BIN"
         
@@ -384,7 +422,7 @@ setup_cloudflared() {
         log "cloudflared not found, attempting download..."
         if downloaded_bin=$(download_cloudflared); then
             CF_BIN="$downloaded_bin"
-            log "cloudflared downloaded to: $CF_BIN"
+            log "✓ cloudflared downloaded to: $CF_BIN"
             
             # تأیید نهایی
             if [ "$OS" != "windows" ] && [ ! -x "$CF_BIN" ]; then
@@ -446,9 +484,9 @@ verify_setup() {
                 fi
             fi
         fi
-        log "cloudflared verified: $CF_BIN (executable)"
+        log "✓ cloudflared verified: $CF_BIN (executable)"
     else
-        log "Warning: cloudflared not available"
+        log "⚠ Warning: cloudflared not available"
     fi
 
     # بررسی دایرکتوری‌ها
@@ -459,7 +497,7 @@ verify_setup() {
         fi
     done
 
-    log "Setup verification completed successfully"
+    log "✓ Setup verification completed successfully"
     return 0
 }
 
@@ -470,13 +508,17 @@ test_cloudflared() {
         if [ -x "$CF_BIN" ]; then
             if "$CF_BIN" version >/dev/null 2>&1; then
                 log "✓ cloudflared test successful"
+                return 0
             else
                 error "cloudflared test failed"
+                return 1
             fi
         else
             error "cloudflared is not executable"
+            return 1
         fi
     fi
+    return 0
 }
 
 run_application() {
