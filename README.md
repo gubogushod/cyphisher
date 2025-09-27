@@ -5,7 +5,7 @@
 ![Cyphisher Banner](https://raw.githubusercontent.com/AUX-441/cyphisher/main/assets/cypshisher.PNG)
 *Professional Cybersecurity Education Tool*
 
-[![Python Version](https://img.shields.io/badge/Python-3.7%2B-blue.svg)](https://python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-success.svg)](https://github.com/AUX-441/cyphisher)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/AUX-441/cyphisher?style=social)](https://github.com/AUX-441/cyphisher/stargazers)
