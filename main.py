@@ -1,28 +1,3 @@
-import sys, subprocess, importlib
-
-required = ["rich", "pyfiglet", "flask", "requests"]
-
-print("checking required packages...")
-
-for pkg in required:
-    try:
-        importlib.import_module(pkg)
-        print(f"✔ {pkg} already installed")
-    except ImportError:
-        print(f"📦 {pkg} missing — installing...")
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
-            print(f"✔ {pkg} installed")
-        except subprocess.CalledProcessError as e:
-            print(f"✖ failed to install {pkg}: {e}")
-
-try:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"])
-    print("✔ pip, setuptools, wheel upgraded")
-except subprocess.CalledProcessError:
-    pass
-
-
 import random
 import sys
 from rich.panel import Panel
@@ -160,6 +135,14 @@ def get_cloudflare_url():
     cloudflared_path = None
     for path in possible_paths:
         if os.path.exists(path):
+            if os.name != 'nt' and not os.access(path, os.X_OK):
+                try:
+                    os.chmod(path, 0o755)
+                    console.print(f"[yellow]Fixed permissions for: {path}[/yellow]")
+                except Exception as e:
+                    console.print(f"[red]Failed to set permissions for {path}: {e}[/red]")
+                    continue
+
             cloudflared_path = path
             break
         elif path == "cloudflared":
@@ -180,6 +163,17 @@ def get_cloudflare_url():
         return None
 
     try:
+        if os.name != 'nt' and not os.access(cloudflared_path, os.X_OK):
+            console.print("[yellow]cloudflared is not executable, trying to fix...[/yellow]")
+            try:
+                os.chmod(cloudflared_path, 0o755)
+                console.print("[green]✓ Permissions fixed[/green]")
+            except Exception as e:
+                console.print(f"[red]Failed to fix permissions: {e}[/red]")
+                return None
+
+        console.print(f"[yellow]Using cloudflared from: {cloudflared_path}[/yellow]")
+
         if os.name == 'nt':
             process = subprocess.Popen(
                 [cloudflared_path, "tunnel", "--url", "http://localhost:5001"],
@@ -198,13 +192,16 @@ def get_cloudflare_url():
 
         console.print("[yellow]⏳ Starting Cloudflare tunnel...[/yellow]")
         cloudflare_url = None
-        timeout = time.time() + 20
+        timeout = time.time() + 25
 
-        while time.time() < timeout:
+        for _ in range(30):
             line = process.stdout.readline()
             if not line:
                 time.sleep(0.5)
                 continue
+
+            console.print(f"[grey]{line.strip()}[/grey]")
+
             cloudflare_url = extract_cloudflare_url(line)
             if cloudflare_url:
                 break
@@ -213,9 +210,14 @@ def get_cloudflare_url():
             console.print(f"[green]✓ Cloudflare URL: {cloudflare_url}[/green]")
             return cloudflare_url
         else:
-            console.print("[red]⚠ Could not extract Cloudflare URL[/red]")
+            console.print("[red]⚠ Could not extract Cloudflare URL after 25 seconds[/red]")
+            process.terminate()
             return None
 
+    except PermissionError as e:
+        console.print(f"[red]Permission error starting cloudflared: {e}[/red]")
+        console.print("[yellow]Try running: chmod +x cloud_flare/cloudflared[/yellow]")
+        return None
     except Exception as e:
         console.print(f"[red]Error starting Cloudflare: {e}[/red]")
         return None
