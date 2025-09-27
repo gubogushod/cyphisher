@@ -350,14 +350,15 @@ UQDt0vlknHD77sHysWRuEV5i79MivfEZGN_CdZH16oj1WnRJ
 
 <div align="center">
 
-**TON Wallet Address:**
-![TON QR Code](https://raw.githubusercontent.com/AUX-441/cyphisher/main/tipme/BNB.jpg)
+**TON Wallet Address:**<br>
+  <img src="https://raw.githubusercontent.com/AUX-441/cyphisher/main/tipme/BNB.jpg" width="150" alt="TON QR Code"><br><br>
 
-**Ethereum/BNB Address:**
-![ETH/BNB QR Code](https://raw.githubusercontent.com/AUX-441/cyphisher/main/tipme/ETH.jpg)
+**Ethereum/BNB Address:**<br>
+  <img src="https://raw.githubusercontent.com/AUX-441/cyphisher/main/tipme/ETH.jpg" width="150" alt="ETH/BNB QR Code"><br><br>
 
-**TRX Address:**
-![TRX QR Code](https://raw.githubusercontent.com/AUX-441/cyphisher/main/tipme/TRX.jpg)
+**TRX Address:**<br>
+  <img src="https://raw.githubusercontent.com/AUX-441/cyphisher/main/tipme/TRX.jpg" width="150" alt="TRX QR Code">
+</div>
 
 </div>
 
