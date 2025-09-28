@@ -21,8 +21,8 @@ fix_system_issues() {
     
     # نصب ca-certificates برای رفع مشکل certificate
     if [ "$IS_TERMUX" -eq 1 ]; then
-        pkg install -y ca-certificates 2>/dev/null || true
-        update-ca-certificates 2>/dev/null || true
+        pkg install -y ca-certificates openssl-tool 2>/dev/null || true
+        update-ca-certificates --fresh 2>/dev/null || true
     fi
     
     # تنظیم DNS سرورهای معتبر
@@ -40,9 +40,14 @@ fix_system_issues() {
 cleanup_old_ngrok() {
     log "🧹 Cleaning up previous ngrok installations..."
     
-    rm -f "${NGROK_DIR}/ngrok" 2>/dev/null || true
+    # Kill any running ngrok processes
+    pkill -f ngrok || true
+    sleep 2
+    
+    rm -rf "${NGROK_DIR}" 2>/dev/null || true
     rm -f "ngrok" 2>/dev/null || true
     rm -f "ngrok.log" 2>/dev/null || true
+    rm -f "ngrok.zip" 2>/dev/null || true
     
     log "✅ Cleanup completed"
 }
@@ -78,7 +83,7 @@ install_dependencies() {
     
     if [ "$IS_TERMUX" -eq 1 ]; then
         pkg update -y
-        pkg install -y python git curl wget unzip -y
+        pkg install -y python git curl wget unzip openssl-tool -y
     else
         log "Please install Python and Git manually for your system"
         return 1
@@ -101,12 +106,24 @@ setup_python_env() {
         return 1
     fi
     
-    pip install --upgrade pip
+    pip install --upgrade pip setuptools wheel
+    
+    # نصب requirements اضافی برای ngrok
+    pip install requests rich pyfiglet flask flask-cors
+    
     if [ -f "requirements.txt" ]; then
         pip install -r requirements.txt
         log "✅ Requirements installed"
     else
-        pip install rich pyfiglet requests flask
+        # ایجاد فایل requirements.txt اگر وجود ندارد
+        cat > requirements.txt << EOF
+requests==2.31.0
+rich==13.5.2
+pyfiglet==0.8.post1
+flask==2.3.3
+flask-cors==4.0.0
+EOF
+        pip install -r requirements.txt
         log "✅ Basic packages installed"
     fi
     
@@ -119,27 +136,95 @@ download_ngrok_guaranteed() {
     
     mkdir -p "$NGROK_DIR"
     
-    URL="https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm64.zip"
-    OUTPUT_ZIP="${NGROK_DIR}/ngrok.zip"
+    # URL جدید برای ngrok
+    URL="https://github.com/ngrok/ngrok-arm64/releases/download/latest/ngrok-v3-stable-linux-arm64.tgz"
+    OUTPUT_FILE="${NGROK_DIR}/ngrok.tar.gz"
     
-    rm -f "$OUTPUT_ZIP" 2>/dev/null || true
+    rm -f "$OUTPUT_FILE" 2>/dev/null || true
+    
+    log "📥 Downloading ngrok from: $URL"
     
     if command -v curl >/dev/null 2>&1; then
         log "🔻 Using curl for download..."
-        curl -L --progress-bar -o "$OUTPUT_ZIP" "$URL"
+        if ! curl -L --progress-bar -o "$OUTPUT_FILE" "$URL"; then
+            error "❌ Download failed with curl, trying alternative URL..."
+            # URL جایگزین
+            URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz"
+            curl -L --progress-bar -o "$OUTPUT_FILE" "$URL" || {
+                error "❌ All download attempts failed"
+                return 1
+            }
+        fi
     elif command -v wget >/dev/null 2>&1; then
         log "🔻 Using wget for download..."
-        wget -O "$OUTPUT_ZIP" "$URL"
+        if ! wget -O "$OUTPUT_FILE" "$URL"; then
+            error "❌ Download failed with wget, trying alternative URL..."
+            URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz"
+            wget -O "$OUTPUT_FILE" "$URL" || {
+                error "❌ All download attempts failed"
+                return 1
+            }
+        fi
     else
         error "❌ Neither curl nor wget available"
         return 1
     fi
     
-    unzip -o "$OUTPUT_ZIP" -d "$NGROK_DIR"
-    chmod +x "${NGROK_DIR}/ngrok"
+    # Extract ngrok
+    log "📦 Extracting ngrok..."
+    if [[ "$OUTPUT_FILE" == *.zip ]]; then
+        unzip -o "$OUTPUT_FILE" -d "$NGROK_DIR"
+    else
+        tar -xzf "$OUTPUT_FILE" -C "$NGROK_DIR"
+    fi
+    
+    # پیدا کردن فایل ngrok
+    if [ -f "${NGROK_DIR}/ngrok" ]; then
+        NGROK_BINARY="${NGROK_DIR}/ngrok"
+    else
+        # جستجو برای فایل ngrok در محتوای extracted
+        NGROK_BINARY=$(find "$NGROK_DIR" -name "ngrok" -type f | head -1)
+        if [ -z "$NGROK_BINARY" ]; then
+            error "❌ Could not find ngrok binary in extracted files"
+            return 1
+        fi
+    fi
+    
+    # قابل اجرا کردن ngrok
+    chmod +x "$NGROK_BINARY"
+    
+    # ایجاد لینک سمبلیک
+    ln -sf "$NGROK_BINARY" "${NGROK_DIR}/ngrok"
+    
     export PATH="$NGROK_DIR:$PATH"
     
-    log "✅ ngrok downloaded and executable"
+    # تست ngrok
+    log "🧪 Testing ngrok..."
+    if "${NGROK_DIR}/ngrok" --version; then
+        log "✅ ngrok downloaded and working"
+    else
+        error "❌ ngrok test failed"
+        return 1
+    fi
+}
+
+# پیکربندی ngrok
+configure_ngrok() {
+    log "⚙️ Configuring ngrok..."
+    
+    # ایجاد پیکربندی اولیه برای ngrok
+    mkdir -p ~/.config/ngrok
+    cat > ~/.config/ngrok/ngrok.yml << EOF
+version: "2"
+authtoken: 
+tunnels:
+  webapp:
+    proto: http
+    addr: 5001
+    bind_tls: true
+EOF
+    
+    log "✅ ngrok configured"
 }
 
 # ایجاد دایرکتوری‌ها
@@ -152,11 +237,16 @@ create_directories() {
         "Discord" "Paypal" "Twitter" "Yahoo" "yandex" "snapchat" "Roblox"
         "adobe" "LinkedIN" "Gitlab" "Ebay" "Dropbox" "chatgpt" "Deepseek"
         "collected_data" "phone_data" "Twitch" "Microsoft"
+        "Pages" "ABOUT" "AI"
     )
     
     for dir in "${dirs[@]}"; do
         mkdir -p "$dir"
     done
+    
+    # ایجاد فایل‌های ضروری اگر وجود ندارند
+    touch "collected_data/all_devices.json"
+    touch "phone_data/numbers.txt"
     
     log "✅ Directories created"
 }
@@ -178,7 +268,11 @@ main() {
     setup_python_env
     
     if [ "$AUTO_NGROK" = "1" ]; then
-        download_ngrok_guaranteed
+        if download_ngrok_guaranteed; then
+            configure_ngrok
+        else
+            log "⚠️ Ngrok installation failed, continuing without ngrok"
+        fi
     fi
     
     create_directories
@@ -190,6 +284,7 @@ main() {
     log "Python: $(python --version 2>/dev/null || echo 'Unknown')"
     log "Virtual Environment: $VENV_DIR"
     log "Port: $PORT"
+    log "Ngrok: $([ -f "${NGROK_DIR}/ngrok" ] && echo 'Installed' || echo 'Not available')"
     
     log "🚀 Starting application in 3 seconds..."
     sleep 3
@@ -199,6 +294,7 @@ main() {
         clear
         log "🏁 Launching Cyphisher..."
         export NGROK_PATH="${NGROK_DIR}/ngrok"
+        export PYTHONPATH="$(pwd)"
         exec "$PYTHON_BIN" "$APP_FILE"
     else
         error "Python binary not found"
