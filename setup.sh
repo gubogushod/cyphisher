@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ===============================
-# Cyphisher Setup Script - Termux + Ngrok Fix
+# Cyphisher Setup Script - Termux
 # ===============================
 
 AUTO_NGROK="${AUTO_NGROK:-1}"
@@ -14,44 +14,6 @@ NGROK_DIR="ngrok"
 
 log(){ printf "\n[setup] %s\n" "$*"; }
 error(){ printf "\n[ERROR] %s\n" "$*" >&2; }
-
-# تابع برای رفع مشکل certificate و DNS
-fix_system_issues() {
-    log "🔧 Fixing system issues..."
-    
-    # نصب ca-certificates برای رفع مشکل certificate
-    if [ "$IS_TERMUX" -eq 1 ]; then
-        pkg install -y ca-certificates openssl-tool 2>/dev/null || true
-        update-ca-certificates --fresh 2>/dev/null || true
-    fi
-    
-    # تنظیم DNS سرورهای معتبر
-    if [ -w "$PREFIX/etc/resolv.conf" ]; then
-        echo "nameserver 8.8.8.8" > $PREFIX/etc/resolv.conf
-        echo "nameserver 1.1.1.1" >> $PREFIX/etc/resolv.conf
-        echo "nameserver 208.67.222.222" >> $PREFIX/etc/resolv.conf
-        log "✅ DNS servers configured"
-    fi
-    
-    log "✅ System issues fixed"
-}
-
-# پاکسازی کامل ngrok قبلی
-cleanup_old_ngrok() {
-    log "🧹 Cleaning up previous ngrok installations..."
-    
-    # Kill any running ngrok processes
-    pkill -f ngrok || true
-    sleep 2
-    
-    rm -rf "${NGROK_DIR}" 2>/dev/null || true
-    rm -f "ngrok" 2>/dev/null || true
-    rm -f "ngrok.log" 2>/dev/null || true
-    rm -f "ngrok.zip" 2>/dev/null || true
-    rm -f "ngrok.tar.gz" 2>/dev/null || true
-    
-    log "✅ Cleanup completed"
-}
 
 # تشخیص پلتفرم
 detect_platform() {
@@ -71,27 +33,56 @@ detect_platform() {
         fi
     fi
 
-    if [[ "$OS" == *"mingw"* ]] || [[ "$OS" == *"cygwin"* ]] || [[ "$OS" == *"msys"* ]]; then
-        OS="windows"
-    fi
-
     log "🔧 Platform: OS=$OS ARCH=$ARCH TERMUX=$IS_TERMUX"
 }
 
-# نصب پایتون و ابزارهای لازم
+# رفع مشکلات سیستم
+fix_system_issues() {
+    log "🔧 Fixing system issues..."
+    
+    if [ "$IS_TERMUX" -eq 1 ]; then
+        pkg install -y ca-certificates openssl-tool -y
+        update-ca-certificates --fresh 2>/dev/null || true
+    fi
+    
+    # تنظیم DNS
+    if [ -w "$PREFIX/etc/resolv.conf" ]; then
+        echo "nameserver 8.8.8.8" > $PREFIX/etc/resolv.conf
+        echo "nameserver 1.1.1.1" >> $PREFIX/etc/resolv.conf
+        log "✅ DNS servers configured"
+    fi
+    
+    log "✅ System issues fixed"
+}
+
+# پاکسازی
+cleanup_old_ngrok() {
+    log "🧹 Cleaning up previous installations..."
+    
+    pkill -f ngrok 2>/dev/null || true
+    pkill -f cloudflared 2>/dev/null || true
+    sleep 2
+    
+    rm -rf "$NGROK_DIR" 2>/dev/null || true
+    rm -rf "cloud_flare" 2>/dev/null || true
+    rm -f "ngrok" "ngrok.zip" "ngrok.tar.gz" 2>/dev/null || true
+    
+    log "✅ Cleanup completed"
+}
+
+# نصب dependencies
 install_dependencies() {
     log "📦 Installing dependencies..."
     
     if [ "$IS_TERMUX" -eq 1 ]; then
         pkg update -y
         pkg install -y python git curl wget unzip openssl-tool -y
-    else
-        log "Please install Python and Git manually for your system"
-        return 1
     fi
+    
+    log "✅ Dependencies installed"
 }
 
-# ایجاد محیط مجازی پایتون
+# ایجاد محیط پایتون
 setup_python_env() {
     log "🐍 Setting up Python environment..."
     
@@ -100,146 +91,82 @@ setup_python_env() {
         log "✅ Virtual environment created"
     fi
     
-    if [ -f "${VENV_DIR}/bin/activate" ]; then
-        source "${VENV_DIR}/bin/activate"
-    else
-        error "Could not activate virtual environment"
-        return 1
-    fi
+    source "${VENV_DIR}/bin/activate"
     
     pip install --upgrade pip setuptools wheel
     
-    # نصب requirements اضافی برای ngrok
+    # نصب پکیج‌های ضروری
     pip install requests rich pyfiglet flask flask-cors
     
-    if [ -f "requirements.txt" ]; then
-        pip install -r requirements.txt
-        log "✅ Requirements installed"
-    else
-        # ایجاد فایل requirements.txt اگر وجود ندارد
-        cat > requirements.txt << EOF
+    # ایجاد requirements.txt
+    cat > requirements.txt << 'EOF'
 requests==2.31.0
 rich==13.5.2
 pyfiglet==0.8.post1
 flask==2.3.3
 flask-cors==4.0.0
 EOF
-        pip install -r requirements.txt
-        log "✅ Basic packages installed"
-    fi
     
-    log "✅ Python environment ready"
+    pip install -r requirements.txt
+    log "✅ Python packages installed"
 }
 
-# دانلود ngrok
-download_ngrok_guaranteed() {
-    log "🌐 Downloading ngrok for Termux..."
+# نصب ngrok
+install_ngrok() {
+    log "🌐 Installing ngrok..."
     
     mkdir -p "$NGROK_DIR"
     
-    # استفاده از ngrok رسمی برای ترمکس
+    # دانلود ngrok
     URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz"
     OUTPUT_FILE="${NGROK_DIR}/ngrok.tar.gz"
     
-    rm -f "$OUTPUT_FILE" 2>/dev/null || true
-    
-    log "📥 Downloading ngrok from: $URL"
-    
-    # دانلود با curl
     if command -v curl >/dev/null 2>&1; then
-        if ! curl -L --progress-bar -o "$OUTPUT_FILE" "$URL"; then
-            error "❌ Download failed with curl"
-            return 1
-        fi
-    # یا با wget
+        curl -L --progress-bar -o "$OUTPUT_FILE" "$URL" || return 1
     elif command -v wget >/dev/null 2>&1; then
-        if ! wget -O "$OUTPUT_FILE" "$URL"; then
-            error "❌ Download failed with wget"
-            return 1
-        fi
+        wget -O "$OUTPUT_FILE" "$URL" || return 1
     else
-        error "❌ Neither curl nor wget available"
         return 1
     fi
     
-    # Extract ngrok
-    log "📦 Extracting ngrok..."
+    # Extract
     cd "$NGROK_DIR"
-    tar -xzf "ngrok.tar.gz" || {
-        error "❌ Extraction failed"
-        cd -
-        return 1
-    }
-    cd -
+    tar -xzf "ngrok.tar.gz"
+    cd ..
     
-    # پیدا کردن فایل ngrok
-    if [ -f "${NGROK_DIR}/ngrok" ]; then
-        NGROK_BINARY="${NGROK_DIR}/ngrok"
-    else
-        error "❌ ngrok binary not found after extraction"
-        return 1
-    fi
-    
-    # قابل اجرا کردن ngrok با دسترسی کامل
-    log "🔐 Setting permissions for ngrok..."
-    chmod 755 "$NGROK_BINARY"
+    # تنظیم دسترسی
+    chmod 755 "${NGROK_DIR}/ngrok"
     
     # تست ngrok
-    log "🧪 Testing ngrok..."
-    if "$NGROK_BINARY" --version; then
-        log "✅ ngrok downloaded and working"
-        
-        # نمایش مسیر کامل
-        log "📁 Ngrok path: $(pwd)/${NGROK_DIR}/ngrok"
+    if "${NGROK_DIR}/ngrok" --version >/dev/null 2>&1; then
+        log "✅ ngrok installed successfully"
+        return 0
     else
         error "❌ ngrok test failed"
         return 1
     fi
 }
 
-# پیکربندی ngrok
-configure_ngrok() {
-    log "⚙️ Configuring ngrok..."
+# نصب cloudflared
+install_cloudflared() {
+    log "🌐 Installing cloudflared as fallback..."
     
-    # ایجاد پیکربندی اولیه برای ngrok
-    mkdir -p ~/.config/ngrok
-    cat > ~/.config/ngrok/ngrok.yml << EOF
-version: "2"
-authtoken: 
-tunnels:
-  webapp:
-    proto: http
-    addr: 5001
-    bind_tls: true
-EOF
-    
-    log "✅ ngrok configured"
-}
-
-# دانلود cloudflared به عنوان fallback
-download_cloudflared() {
-    log "🌐 Downloading cloudflared as fallback..."
-    
-    CLOUDFLARE_DIR="cloud_flare"
-    mkdir -p "$CLOUDFLARE_DIR"
+    mkdir -p "cloud_flare"
     
     URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
-    OUTPUT_FILE="${CLOUDFLARE_DIR}/cloudflared"
+    OUTPUT_FILE="cloud_flare/cloudflared"
     
     if command -v curl >/dev/null 2>&1; then
-        curl -L --progress-bar -o "$OUTPUT_FILE" "$URL" || {
-            error "❌ Cloudflared download failed"
-            return 1
-        }
+        curl -L --progress-bar -o "$OUTPUT_FILE" "$URL" || return 1
     elif command -v wget >/dev/null 2>&1; then
-        wget -O "$OUTPUT_FILE" "$URL" || {
-            error "❌ Cloudflared download failed"
-            return 1
-        }
+        wget -O "$OUTPUT_FILE" "$URL" || return 1
+    else
+        return 1
     fi
     
     chmod 755 "$OUTPUT_FILE"
-    log "✅ cloudflared downloaded as fallback"
+    log "✅ cloudflared installed"
+    return 0
 }
 
 # ایجاد دایرکتوری‌ها
@@ -259,7 +186,7 @@ create_directories() {
         mkdir -p "$dir"
     done
     
-    # ایجاد فایل‌های ضروری اگر وجود ندارند
+    # ایجاد فایل‌های ضروری
     touch "collected_data/all_devices.json"
     touch "phone_data/numbers.txt"
     
@@ -268,12 +195,12 @@ create_directories() {
 
 # تابع اصلی
 main() {
-    log "🚀 Starting Cyphisher Setup for Termux + Ngrok..."
+    log "🚀 Starting Cyphisher Setup for Termux..."
     
     detect_platform
     
     if [ "$IS_TERMUX" -ne 1 ]; then
-        error "This script is optimized for Termux only"
+        error "This script is for Termux only"
         exit 1
     fi
     
@@ -282,13 +209,15 @@ main() {
     install_dependencies
     setup_python_env
     
+    # نصب tunnel services
     if [ "$AUTO_NGROK" = "1" ]; then
-        if download_ngrok_guaranteed; then
-            configure_ngrok
-        else
-            log "⚠️ Ngrok installation failed, downloading cloudflared..."
-            download_cloudflared
+        if ! install_ngrok; then
+            log "⚠️ Ngrok installation failed"
         fi
+    fi
+    
+    if ! install_cloudflared; then
+        log "⚠️ Cloudflared installation failed"
     fi
     
     create_directories
@@ -297,7 +226,7 @@ main() {
     log "🎊 SETUP COMPLETED SUCCESSFULLY!"
     log "==========================================="
     log "Platform: Termux ($ARCH)"
-    log "Python: $(python --version 2>/dev/null || echo 'Unknown')"
+    log "Python: $(python --version 2>/dev/null)"
     log "Virtual Environment: $VENV_DIR"
     log "Port: $PORT"
     log "Ngrok: $([ -f "${NGROK_DIR}/ngrok" ] && echo 'Installed' || echo 'Not available')"
@@ -307,12 +236,11 @@ main() {
     sleep 3
     
     if [ -f "${VENV_DIR}/bin/python" ]; then
-        PYTHON_BIN="${VENV_DIR}/bin/python"
         clear
         log "🏁 Launching Cyphisher..."
-        export NGROK_PATH="${NGROK_DIR}/ngrok"
+        export PATH="$(pwd)/${NGROK_DIR}:$(pwd)/cloud_flare:$PATH"
         export PYTHONPATH="$(pwd)"
-        exec "$PYTHON_BIN" "$APP_FILE"
+        exec "${VENV_DIR}/bin/python" "$APP_FILE"
     else
         error "Python binary not found"
         exit 1
