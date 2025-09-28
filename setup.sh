@@ -48,6 +48,7 @@ cleanup_old_ngrok() {
     rm -f "ngrok" 2>/dev/null || true
     rm -f "ngrok.log" 2>/dev/null || true
     rm -f "ngrok.zip" 2>/dev/null || true
+    rm -f "ngrok.tar.gz" 2>/dev/null || true
     
     log "✅ Cleanup completed"
 }
@@ -136,34 +137,25 @@ download_ngrok_guaranteed() {
     
     mkdir -p "$NGROK_DIR"
     
-    # URL جدید برای ngrok
-    URL="https://github.com/ngrok/ngrok-arm64/releases/download/latest/ngrok-v3-stable-linux-arm64.tgz"
+    # استفاده از ngrok رسمی برای ترمکس
+    URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz"
     OUTPUT_FILE="${NGROK_DIR}/ngrok.tar.gz"
     
     rm -f "$OUTPUT_FILE" 2>/dev/null || true
     
     log "📥 Downloading ngrok from: $URL"
     
+    # دانلود با curl
     if command -v curl >/dev/null 2>&1; then
-        log "🔻 Using curl for download..."
         if ! curl -L --progress-bar -o "$OUTPUT_FILE" "$URL"; then
-            error "❌ Download failed with curl, trying alternative URL..."
-            # URL جایگزین
-            URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz"
-            curl -L --progress-bar -o "$OUTPUT_FILE" "$URL" || {
-                error "❌ All download attempts failed"
-                return 1
-            }
+            error "❌ Download failed with curl"
+            return 1
         fi
+    # یا با wget
     elif command -v wget >/dev/null 2>&1; then
-        log "🔻 Using wget for download..."
         if ! wget -O "$OUTPUT_FILE" "$URL"; then
-            error "❌ Download failed with wget, trying alternative URL..."
-            URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz"
-            wget -O "$OUTPUT_FILE" "$URL" || {
-                error "❌ All download attempts failed"
-                return 1
-            }
+            error "❌ Download failed with wget"
+            return 1
         fi
     else
         error "❌ Neither curl nor wget available"
@@ -172,36 +164,33 @@ download_ngrok_guaranteed() {
     
     # Extract ngrok
     log "📦 Extracting ngrok..."
-    if [[ "$OUTPUT_FILE" == *.zip ]]; then
-        unzip -o "$OUTPUT_FILE" -d "$NGROK_DIR"
-    else
-        tar -xzf "$OUTPUT_FILE" -C "$NGROK_DIR"
-    fi
+    cd "$NGROK_DIR"
+    tar -xzf "ngrok.tar.gz" || {
+        error "❌ Extraction failed"
+        cd -
+        return 1
+    }
+    cd -
     
     # پیدا کردن فایل ngrok
     if [ -f "${NGROK_DIR}/ngrok" ]; then
         NGROK_BINARY="${NGROK_DIR}/ngrok"
     else
-        # جستجو برای فایل ngrok در محتوای extracted
-        NGROK_BINARY=$(find "$NGROK_DIR" -name "ngrok" -type f | head -1)
-        if [ -z "$NGROK_BINARY" ]; then
-            error "❌ Could not find ngrok binary in extracted files"
-            return 1
-        fi
+        error "❌ ngrok binary not found after extraction"
+        return 1
     fi
     
-    # قابل اجرا کردن ngrok
-    chmod +x "$NGROK_BINARY"
-    
-    # ایجاد لینک سمبلیک
-    ln -sf "$NGROK_BINARY" "${NGROK_DIR}/ngrok"
-    
-    export PATH="$NGROK_DIR:$PATH"
+    # قابل اجرا کردن ngrok با دسترسی کامل
+    log "🔐 Setting permissions for ngrok..."
+    chmod 755 "$NGROK_BINARY"
     
     # تست ngrok
     log "🧪 Testing ngrok..."
-    if "${NGROK_DIR}/ngrok" --version; then
+    if "$NGROK_BINARY" --version; then
         log "✅ ngrok downloaded and working"
+        
+        # نمایش مسیر کامل
+        log "📁 Ngrok path: $(pwd)/${NGROK_DIR}/ngrok"
     else
         error "❌ ngrok test failed"
         return 1
@@ -225,6 +214,32 @@ tunnels:
 EOF
     
     log "✅ ngrok configured"
+}
+
+# دانلود cloudflared به عنوان fallback
+download_cloudflared() {
+    log "🌐 Downloading cloudflared as fallback..."
+    
+    CLOUDFLARE_DIR="cloud_flare"
+    mkdir -p "$CLOUDFLARE_DIR"
+    
+    URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
+    OUTPUT_FILE="${CLOUDFLARE_DIR}/cloudflared"
+    
+    if command -v curl >/dev/null 2>&1; then
+        curl -L --progress-bar -o "$OUTPUT_FILE" "$URL" || {
+            error "❌ Cloudflared download failed"
+            return 1
+        }
+    elif command -v wget >/dev/null 2>&1; then
+        wget -O "$OUTPUT_FILE" "$URL" || {
+            error "❌ Cloudflared download failed"
+            return 1
+        }
+    fi
+    
+    chmod 755 "$OUTPUT_FILE"
+    log "✅ cloudflared downloaded as fallback"
 }
 
 # ایجاد دایرکتوری‌ها
@@ -271,7 +286,8 @@ main() {
         if download_ngrok_guaranteed; then
             configure_ngrok
         else
-            log "⚠️ Ngrok installation failed, continuing without ngrok"
+            log "⚠️ Ngrok installation failed, downloading cloudflared..."
+            download_cloudflared
         fi
     fi
     
@@ -285,6 +301,7 @@ main() {
     log "Virtual Environment: $VENV_DIR"
     log "Port: $PORT"
     log "Ngrok: $([ -f "${NGROK_DIR}/ngrok" ] && echo 'Installed' || echo 'Not available')"
+    log "Cloudflared: $([ -f "cloud_flare/cloudflared" ] && echo 'Installed' || echo 'Not available')"
     
     log "🚀 Starting application in 3 seconds..."
     sleep 3
