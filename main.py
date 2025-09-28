@@ -15,11 +15,9 @@ from rich.console import Console
 console = Console()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Import requests with fallback
 try:
     import requests
 except ImportError:
-    console.print("[red]requests module not found! Installing...[/red]")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
     import requests
 
@@ -249,6 +247,9 @@ def get_cloudflare_url():
 
 def get_ngrok_url():
     """Get ngrok tunnel URL"""
+    console.print("[cyan]🔄 Starting ngrok tunnel...[/cyan]")
+    
+    # پیدا کردن ngrok
     possible_paths = [
         os.path.join(BASE_DIR, "ngrok", "ngrok"),
         os.path.join(BASE_DIR, "ngrok"),
@@ -259,38 +260,22 @@ def get_ngrok_url():
     for path in possible_paths:
         if os.path.exists(path):
             console.print(f"[green]✓ Found ngrok at: {path}[/green]")
-            # بررسی دسترسی
             if not os.access(path, os.X_OK):
-                console.print(f"[yellow]⚠ Ngrok not executable, fixing permissions...[/yellow]")
                 try:
                     os.chmod(path, 0o755)
-                    console.print("[green]✓ Permissions fixed[/green]")
+                    console.print("[green]✓ Fixed permissions[/green]")
                 except Exception as e:
                     console.print(f"[red]❌ Could not fix permissions: {e}[/red]")
                     continue
-            
-            # تست اجرا
-            try:
-                result = subprocess.run([path, "--version"], 
-                                      capture_output=True, 
-                                      text=True, 
-                                      timeout=5)
-                if result.returncode == 0:
-                    ngrok_path = path
-                    console.print(f"[green]✓ Ngrok is working: {result.stdout.strip()}[/green]")
-                    break
-                else:
-                    console.print(f"[red]❌ Ngrok test failed: {result.stderr}[/red]")
-            except Exception as e:
-                console.print(f"[red]❌ Ngrok test error: {e}[/red]")
-                continue
+            ngrok_path = path
+            break
 
     if not ngrok_path:
-        console.print("[red]ngrok not found or not working![/red]")
+        console.print("[red]❌ ngrok not found![/red]")
         return None
 
     try:
-        # Kill any existing ngrok processes
+        # کشتن پروسه‌های قبلی
         console.print("[yellow]🔄 Killing existing ngrok processes...[/yellow]")
         if os.name == 'nt':
             subprocess.run(['taskkill', '/f', '/im', 'ngrok.exe'], 
@@ -301,7 +286,7 @@ def get_ngrok_url():
         
         time.sleep(3)
 
-        # Start ngrok tunnel با لاگ کامل
+        # اجرای ngrok
         console.print("[yellow]⏳ Starting ngrok tunnel...[/yellow]")
         
         if os.name == 'nt':
@@ -320,16 +305,17 @@ def get_ngrok_url():
                 universal_newlines=True
             )
 
-        # صبر بیشتر برای ngrok
-        console.print("[yellow]⏳ Waiting for ngrok to initialize (20 seconds)...[/yellow]")
-        time.sleep(20)
+        # صبر برای راه‌اندازی ngrok
+        console.print("[yellow]⏳ Waiting for ngrok to initialize (15 seconds)...[/yellow]")
+        time.sleep(15)
 
-        # Try to get ngrok URL via API with more retries and longer timeout
-        max_retries = 8
+        # روش 1: استفاده از API
+        console.print("[yellow]🔄 Trying to get URL via API...[/yellow]")
+        max_retries = 6
         for retry in range(max_retries):
             try:
-                console.print(f"[grey]Attempting to get ngrok URL (attempt {retry + 1}/{max_retries})...[/grey]")
-                response = requests.get("http://localhost:4040/api/tunnels", timeout=15)
+                console.print(f"[grey]Attempt {retry + 1}/{max_retries}...[/grey]")
+                response = requests.get("http://localhost:4040/api/tunnels", timeout=10)
                 if response.status_code == 200:
                     data = response.json()
                     tunnels = data.get("tunnels", [])
@@ -340,6 +326,7 @@ def get_ngrok_url():
                             if ngrok_url:
                                 console.print(f"[green]✓ Ngrok URL found: {ngrok_url}[/green]")
                                 
+                                # ذخیره URL
                                 try:
                                     with open("ngrok_url.txt", "w") as f:
                                         f.write(ngrok_url)
@@ -348,45 +335,65 @@ def get_ngrok_url():
                                     console.print(f"[yellow]⚠ Could not save URL: {e}[/yellow]")
                                 
                                 return ngrok_url
-                
-                time.sleep(5)  # Wait longer between retries
+                time.sleep(3)
             except requests.exceptions.RequestException as e:
                 console.print(f"[grey]API attempt {retry + 1} failed: {e}[/grey]")
-                time.sleep(5)
+                time.sleep(3)
                 continue
 
-        # اگر API کار نکرد، از خروجی ngrok استفاده کن
-        console.print("[yellow]🔄 Trying to get URL from ngrok output...[/yellow]")
+        # روش 2: استفاده از دستور tunnels list
+        console.print("[yellow]🔄 Trying via ngrok tunnels list...[/yellow]")
         try:
-            # Check if process is still running
-            if process.poll() is None:
-                # Process is still running, try to read output
-                stdout, stderr = process.communicate(timeout=5)
-                console.print(f"[grey]Ngrok output: {stdout}[/grey]")
-                if stderr:
-                    console.print(f"[grey]Ngrok errors: {stderr}[/grey]")
+            result = subprocess.run(
+                [ngrok_path, "tunnel", "list"],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                output = result.stdout
+                console.print(f"[grey]Tunnel list output: {output}[/grey]")
                 
-                # Extract URL from output
+                # استخراج URL
                 ngrok_patterns = [
-                    r'url=([^\s]+)',
-                    r'at (https://[^\s]+)',
-                    r'Forwarding[[:space:]]+(https://[^[:space:]]+)',
                     r'https://[a-zA-Z0-9-]+\.ngrok\.io',
-                    r'https://[a-zA-Z0-9-]+\.ngrok-free\.app'
+                    r'https://[a-zA-Z0-9-]+\.ngrok-free\.app',
+                    r'Forwarding[[:space:]]+(https://[^[:space:]]+)'
                 ]
                 
-                combined_output = stdout + "\n" + stderr
                 for pattern in ngrok_patterns:
-                    matches = re.findall(pattern, combined_output)
+                    matches = re.findall(pattern, output)
                     if matches:
                         ngrok_url = matches[0]
-                        console.print(f"[green]✓ Found ngrok URL from output: {ngrok_url}[/green]")
+                        console.print(f"[green]✓ Found ngrok URL via command: {ngrok_url}[/green]")
                         return ngrok_url
         except Exception as e:
-            console.print(f"[yellow]Output reading failed: {e}[/yellow]")
+            console.print(f"[yellow]Tunnel list failed: {e}[/yellow]")
+
+        # روش 3: خواندن خروجی مستقیم ngrok
+        console.print("[yellow]🔄 Checking ngrok output directly...[/yellow]")
+        try:
+            stdout, stderr = process.communicate(timeout=5)
+            full_output = stdout + stderr
+            
+            patterns = [
+                r'url=([^\s]+)',
+                r'at (https://[^\s]+)',
+                r'Forwarding[[:space:]]+(https://[^[:space:]]+)',
+                r'https://[a-zA-Z0-9-]+\.ngrok\.io',
+                r'https://[a-zA-Z0-9-]+\.ngrok-free\.app'
+            ]
+            
+            for pattern in patterns:
+                matches = re.findall(pattern, full_output)
+                if matches:
+                    ngrok_url = matches[0]
+                    console.print(f"[green]✓ Found ngrok URL from output: {ngrok_url}[/green]")
+                    return ngrok_url
+                    
+        except subprocess.TimeoutExpired:
+            console.print("[yellow]⚠ Ngrok is still running but couldn't get URL[/yellow]")
 
         console.print("[red]❌ Could not get ngrok URL after multiple attempts[/red]")
-        # Process را نگه دار چون ممکنه بعداً کار کنه
         return None
 
     except Exception as e:
@@ -396,7 +403,8 @@ def get_ngrok_url():
 
 def get_tunnel_url():
     """Get tunnel URL - try ngrok first, then cloudflare"""
-    # Check if ngrok is available
+    
+    # چک کردن ngrok
     ngrok_paths = [
         os.path.join(BASE_DIR, "ngrok", "ngrok"),
         os.path.join(BASE_DIR, "ngrok"),
@@ -413,7 +421,7 @@ def get_tunnel_url():
         else:
             console.print("[yellow]⚠ Ngrok failed, falling back to Cloudflare...[/yellow]")
     
-    # Use Cloudflare as fallback
+    # استفاده از cloudflare
     console.print("[cyan]🔄 Using Cloudflare tunnel...[/cyan]")
     cloudflare_url = get_cloudflare_url()
     return cloudflare_url, "cloudflare"
@@ -426,7 +434,7 @@ def Choice():
         console.print("[red]Please enter a valid number[/red]")
         return
 
-    # Get tunnel URL (ngrok first, then cloudflare fallback)
+    # گرفتن آدرس تونل
     tunnel_url, tunnel_type = get_tunnel_url()
     
     if not tunnel_url:
