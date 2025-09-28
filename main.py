@@ -258,16 +258,35 @@ def get_ngrok_url():
     ngrok_path = None
     for path in possible_paths:
         if os.path.exists(path):
-            if os.name != 'nt' and not os.access(path, os.X_OK):
+            console.print(f"[green]✓ Found ngrok at: {path}[/green]")
+            # بررسی دسترسی
+            if not os.access(path, os.X_OK):
+                console.print(f"[yellow]⚠ Ngrok not executable, fixing permissions...[/yellow]")
                 try:
                     os.chmod(path, 0o755)
-                except:
-                    pass
-            ngrok_path = path
-            break
+                    console.print("[green]✓ Permissions fixed[/green]")
+                except Exception as e:
+                    console.print(f"[red]❌ Could not fix permissions: {e}[/red]")
+                    continue
+            
+            # تست اجرا
+            try:
+                result = subprocess.run([path, "--version"], 
+                                      capture_output=True, 
+                                      text=True, 
+                                      timeout=5)
+                if result.returncode == 0:
+                    ngrok_path = path
+                    console.print(f"[green]✓ Ngrok is working: {result.stdout.strip()}[/green]")
+                    break
+                else:
+                    console.print(f"[red]❌ Ngrok test failed: {result.stderr}[/red]")
+            except Exception as e:
+                console.print(f"[red]❌ Ngrok test error: {e}[/red]")
+                continue
 
     if not ngrok_path:
-        console.print("[red]ngrok not found![/red]")
+        console.print("[red]ngrok not found or not working![/red]")
         return None
 
     try:
@@ -282,7 +301,7 @@ def get_ngrok_url():
         
         time.sleep(3)
 
-        # Start ngrok tunnel
+        # Start ngrok tunnel با لاگ کامل
         console.print("[yellow]⏳ Starting ngrok tunnel...[/yellow]")
         
         if os.name == 'nt':
@@ -301,9 +320,9 @@ def get_ngrok_url():
                 universal_newlines=True
             )
 
-        # Wait longer for ngrok to start
-        console.print("[yellow]⏳ Waiting for ngrok to initialize (15 seconds)...[/yellow]")
-        time.sleep(15)
+        # صبر بیشتر برای ngrok
+        console.print("[yellow]⏳ Waiting for ngrok to initialize (20 seconds)...[/yellow]")
+        time.sleep(20)
 
         # Try to get ngrok URL via API with more retries and longer timeout
         max_retries = 8
