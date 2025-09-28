@@ -272,6 +272,7 @@ def get_ngrok_url():
 
     try:
         # Kill any existing ngrok processes
+        console.print("[yellow]🔄 Killing existing ngrok processes...[/yellow]")
         if os.name == 'nt':
             subprocess.run(['taskkill', '/f', '/im', 'ngrok.exe'], 
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -279,34 +280,37 @@ def get_ngrok_url():
             subprocess.run(['pkill', '-f', 'ngrok'], 
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        time.sleep(2)
+        time.sleep(3)
 
-        # Start ngrok tunnel in background
-        console.print("[yellow]⏳ Starting ngrok tunnel (may take up to 20 seconds)...[/yellow]")
+        # Start ngrok tunnel
+        console.print("[yellow]⏳ Starting ngrok tunnel...[/yellow]")
         
         if os.name == 'nt':
             process = subprocess.Popen(
                 [ngrok_path, "http", "5001"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
         else:
             process = subprocess.Popen(
-                [ngrok_path, "http", "5001"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                [ngrok_path, "http", "5001", "--log=stdout"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True
             )
 
-        # Wait for ngrok to start
-        time.sleep(8)
+        # Wait longer for ngrok to start
+        console.print("[yellow]⏳ Waiting for ngrok to initialize (15 seconds)...[/yellow]")
+        time.sleep(15)
 
-        # Try to get ngrok URL via API
-        max_retries = 5
+        # Try to get ngrok URL via API with more retries and longer timeout
+        max_retries = 8
         for retry in range(max_retries):
             try:
                 console.print(f"[grey]Attempting to get ngrok URL (attempt {retry + 1}/{max_retries})...[/grey]")
-                response = requests.get("http://localhost:4040/api/tunnels", timeout=10)
+                response = requests.get("http://localhost:4040/api/tunnels", timeout=15)
                 if response.status_code == 200:
                     data = response.json()
                     tunnels = data.get("tunnels", [])
@@ -317,7 +321,6 @@ def get_ngrok_url():
                             if ngrok_url:
                                 console.print(f"[green]✓ Ngrok URL found: {ngrok_url}[/green]")
                                 
-                                # Save to file
                                 try:
                                     with open("ngrok_url.txt", "w") as f:
                                         f.write(ngrok_url)
@@ -327,43 +330,44 @@ def get_ngrok_url():
                                 
                                 return ngrok_url
                 
-                time.sleep(3)
+                time.sleep(5)  # Wait longer between retries
             except requests.exceptions.RequestException as e:
                 console.print(f"[grey]API attempt {retry + 1} failed: {e}[/grey]")
-                time.sleep(3)
+                time.sleep(5)
                 continue
 
-        # Fallback: try ngrok tunnel list command
-        console.print("[yellow]Trying fallback method...[/yellow]")
+        # اگر API کار نکرد، از خروجی ngrok استفاده کن
+        console.print("[yellow]🔄 Trying to get URL from ngrok output...[/yellow]")
         try:
-            result = subprocess.run(
-                [ngrok_path, "tunnel", "list"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            if result.returncode == 0:
-                output = result.stdout
-                console.print(f"[grey]Ngrok tunnel list output: {output}[/grey]")
+            # Check if process is still running
+            if process.poll() is None:
+                # Process is still running, try to read output
+                stdout, stderr = process.communicate(timeout=5)
+                console.print(f"[grey]Ngrok output: {stdout}[/grey]")
+                if stderr:
+                    console.print(f"[grey]Ngrok errors: {stderr}[/grey]")
                 
                 # Extract URL from output
                 ngrok_patterns = [
+                    r'url=([^\s]+)',
+                    r'at (https://[^\s]+)',
+                    r'Forwarding[[:space:]]+(https://[^[:space:]]+)',
                     r'https://[a-zA-Z0-9-]+\.ngrok\.io',
-                    r'https://[a-zA-Z0-9-]+\.ngrok-free\.app',
-                    r'Forwarding[[:space:]]+(https://[^[:space:]]+)'
+                    r'https://[a-zA-Z0-9-]+\.ngrok-free\.app'
                 ]
                 
+                combined_output = stdout + "\n" + stderr
                 for pattern in ngrok_patterns:
-                    matches = re.findall(pattern, output)
+                    matches = re.findall(pattern, combined_output)
                     if matches:
                         ngrok_url = matches[0]
-                        console.print(f"[green]✓ Found ngrok URL via command: {ngrok_url}[/green]")
+                        console.print(f"[green]✓ Found ngrok URL from output: {ngrok_url}[/green]")
                         return ngrok_url
         except Exception as e:
-            console.print(f"[yellow]Fallback method failed: {e}[/yellow]")
+            console.print(f"[yellow]Output reading failed: {e}[/yellow]")
 
         console.print("[red]❌ Could not get ngrok URL after multiple attempts[/red]")
+        # Process را نگه دار چون ممکنه بعداً کار کنه
         return None
 
     except Exception as e:
