@@ -2,15 +2,15 @@
 set -euo pipefail
 
 # ===============================
-# Cyphisher Setup Script - Termux Complete Fix
+# Cyphisher Setup Script - Termux + Ngrok Fix
 # ===============================
 
-AUTO_CF="${AUTO_CF:-1}"
+AUTO_NGROK="${AUTO_NGROK:-1}"
 PORT="${PORT:-5001}"
 
 APP_FILE="main.py"
 VENV_DIR="venv"
-CF_DIR="cloud_flare"
+NGROK_DIR="ngrok"
 
 log(){ printf "\n[setup] %s\n" "$*"; }
 error(){ printf "\n[ERROR] %s\n" "$*" >&2; }
@@ -33,26 +33,16 @@ fix_system_issues() {
         log "✅ DNS servers configured"
     fi
     
-    # تست اتصال به Cloudflare
-    log "📡 Testing connection to Cloudflare..."
-    if ping -c 2 -W 3 api.trycloudflare.com >/dev/null 2>&1; then
-        log "✅ Connection test successful"
-    else
-        log "⚠️ Connection test failed, but continuing..."
-    fi
-    
     log "✅ System issues fixed"
 }
 
-# پاکسازی کامل cloudflared قبلی
-cleanup_old_cloudflared() {
-    log "🧹 Cleaning up previous cloudflared installations..."
+# پاکسازی کامل ngrok قبلی
+cleanup_old_ngrok() {
+    log "🧹 Cleaning up previous ngrok installations..."
     
-    rm -f "${CF_DIR}/cloudflared" 2>/dev/null || true
-    rm -f "${CF_DIR}/cloudflared.exe" 2>/dev/null || true
-    rm -f "cloudflared" 2>/dev/null || true
-    rm -f "cloudflared.exe" 2>/dev/null || true
-    rm -f "cloudflared.log" "cloudflared_url.txt" "app.pid" "cf.pid" 2>/dev/null || true
+    rm -f "${NGROK_DIR}/ngrok" 2>/dev/null || true
+    rm -f "ngrok" 2>/dev/null || true
+    rm -f "ngrok.log" 2>/dev/null || true
     
     log "✅ Cleanup completed"
 }
@@ -88,7 +78,7 @@ install_dependencies() {
     
     if [ "$IS_TERMUX" -eq 1 ]; then
         pkg update -y
-        pkg install -y python git curl wget ca-certificates -y
+        pkg install -y python git curl wget unzip -y
     else
         log "Please install Python and Git manually for your system"
         return 1
@@ -123,38 +113,33 @@ setup_python_env() {
     log "✅ Python environment ready"
 }
 
-# دانلود cloudflared با رفع مشکلات احتمالی
-download_cloudflared_guaranteed() {
-    log "🌐 Downloading cloudflared for Termux..."
+# دانلود ngrok
+download_ngrok_guaranteed() {
+    log "🌐 Downloading ngrok for Termux..."
     
-    mkdir -p "$CF_DIR"
+    mkdir -p "$NGROK_DIR"
     
-    URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
-    OUTPUT_FILE="${CF_DIR}/cloudflared"
+    URL="https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm64.zip"
+    OUTPUT_ZIP="${NGROK_DIR}/ngrok.zip"
     
-    rm -f "$OUTPUT_FILE" 2>/dev/null || true
+    rm -f "$OUTPUT_ZIP" 2>/dev/null || true
     
     if command -v curl >/dev/null 2>&1; then
         log "🔻 Using curl for download..."
-        if ! curl -L --progress-bar -o "$OUTPUT_FILE" "$URL"; then
-            log "🔄 Trying alternative download mirror..."
-            curl -L --progress-bar -o "$OUTPUT_FILE" "https://cdn.cloudflare.com/cloudflared/releases/latest/cloudflared-linux-arm64"
-        fi
+        curl -L --progress-bar -o "$OUTPUT_ZIP" "$URL"
     elif command -v wget >/dev/null 2>&1; then
         log "🔻 Using wget for download..."
-        if ! wget -O "$OUTPUT_FILE" "$URL"; then
-            log "🔄 Trying alternative download mirror..."
-            wget -O "$OUTPUT_FILE" "https://cdn.cloudflare.com/cloudflared/releases/latest/cloudflared-linux-arm64"
-        fi
+        wget -O "$OUTPUT_ZIP" "$URL"
     else
         error "❌ Neither curl nor wget available"
         return 1
     fi
     
-    chmod +x "$OUTPUT_FILE"
-    export PATH="$CF_DIR:$PATH"
+    unzip -o "$OUTPUT_ZIP" -d "$NGROK_DIR"
+    chmod +x "${NGROK_DIR}/ngrok"
+    export PATH="$NGROK_DIR:$PATH"
     
-    log "✅ cloudflared downloaded and executable"
+    log "✅ ngrok downloaded and executable"
 }
 
 # ایجاد دایرکتوری‌ها
@@ -176,45 +161,9 @@ create_directories() {
     log "✅ Directories created"
 }
 
-# ایجاد فایل پیکربندی برای cloudflared
-create_cloudflared_config() {
-    log "⚙️ Creating cloudflared configuration..."
-    
-    local config_file="${CF_DIR}/config.yml"
-    
-    cat > "$config_file" << EOF
-# Cloudflared configuration for Cyphisher
-tunnel: cyphisher-tunnel
-credentials-file: ${CF_DIR}/credentials.json
-
-ingress:
-  - hostname: cyphisher.localhost
-    service: http://localhost:${PORT}
-  - service: http_status:404
-
-warp-routing:
-  enabled: false
-
-originRequest:
-  noTLSVerify: true
-  connectTimeout: 30s
-  tlsTimeout: 10s
-  tcpKeepAlive: 30s
-  noHappyEyeballs: false
-  keepAliveConnections: 10
-  keepAliveTimeout: 1m30s
-
-logging:
-  level: info
-  format: json
-EOF
-
-    log "✅ Cloudflared configuration created"
-}
-
 # تابع اصلی
 main() {
-    log "🚀 Starting Cyphisher Setup for Termux..."
+    log "🚀 Starting Cyphisher Setup for Termux + Ngrok..."
     
     detect_platform
     
@@ -224,13 +173,12 @@ main() {
     fi
     
     fix_system_issues
-    cleanup_old_cloudflared
+    cleanup_old_ngrok
     install_dependencies
     setup_python_env
     
-    if [ "$AUTO_CF" = "1" ]; then
-        download_cloudflared_guaranteed
-        create_cloudflared_config
+    if [ "$AUTO_NGROK" = "1" ]; then
+        download_ngrok_guaranteed
     fi
     
     create_directories
@@ -250,7 +198,7 @@ main() {
         PYTHON_BIN="${VENV_DIR}/bin/python"
         clear
         log "🏁 Launching Cyphisher..."
-        export CLOUDFLARED_PATH="${CF_DIR}/cloudflared"
+        export NGROK_PATH="${NGROK_DIR}/ngrok"
         exec "$PYTHON_BIN" "$APP_FILE"
     else
         error "Python binary not found"
